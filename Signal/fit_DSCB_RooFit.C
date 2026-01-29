@@ -71,7 +71,7 @@ void fit_DSCB_RooFit()
     // ----------------------------------------------------------
     // 5. Fit the model to the data
     // ----------------------------------------------------------
-    x.setRange("fitRange", 400, 2000);
+    x.setRange("fitRange", 400, 3000);
     dscb.fitTo(data, SumW2Error(kTRUE), PrintLevel(-1), Range("fitRange"));
 
     //{{{    // ----------------------------------------------------------
@@ -222,9 +222,9 @@ void fit_DSCB_RooFit()
     // ----------------------------------------------------------
     // 8. Save everything into a RooWorkspace for Combine
     // ----------------------------------------------------------
-    // Find the bin numbers corresponding to the range [700, 2000]
+    // Find the bin numbers corresponding to the range [700, 3000]
     int bin_start = h->GetXaxis()->FindBin(700.0);
-    int bin_end   = h->GetXaxis()->FindBin(2000.0);
+    int bin_end   = h->GetXaxis()->FindBin(3000.0);
 
     // Integrate only within those bins
     double Nsig = h->Integral(bin_start, bin_end);
@@ -241,7 +241,7 @@ void fit_DSCB_RooFit()
 
     ws.writeToFile("signal_DSCB_workspace.root");
 
-    std::cout << "Signal Yield in [700, 2000]: " << Nsig << std::endl;
+    std::cout << "Signal Yield in [700, 3000]: " << Nsig << std::endl;
     std::cout << "\nWorkspace saved to: signal_DSCB_workspace.root\n";
     f->Close();
 }
