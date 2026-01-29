@@ -27,7 +27,7 @@ void fit_DSCB_RooFit()
     // ----------------------------------------------------------
     // 1. Load your signal histogram
     // ----------------------------------------------------------
-    TFile *f = TFile::Open("/eos/user/h/hsiaoche/Signal/CstarToGJ_M1000_f0p1_13TeV_NANOAOD_v2/CstarToGJ.root");
+    TFile *f = TFile::Open("CstarToGJ.root");
     if (!f) { std::cerr << "File not found!" << std::endl; return; }
 
     TH1F *h = (TH1F*)f->Get("hM_reco_selected");
@@ -37,6 +37,7 @@ void fit_DSCB_RooFit()
     double xmin = h->GetXaxis()->GetXmin();
     double xmax = h->GetXaxis()->GetXmax();
     double peak = h->GetBinCenter(h->GetMaximumBin());
+
 
     // ----------------------------------------------------------
     // 2. Define RooFit observable (mass)
@@ -73,8 +74,7 @@ void fit_DSCB_RooFit()
     x.setRange("fitRange", 400, 2000);
     dscb.fitTo(data, SumW2Error(kTRUE), PrintLevel(-1), Range("fitRange"));
 
-
-    // ----------------------------------------------------------
+    //{{{    // ----------------------------------------------------------
     // Plot residual
     // ----------------------------------------------------------
     TH1F* hResidual = (TH1F*)h->Clone("hResidual");
@@ -99,12 +99,14 @@ void fit_DSCB_RooFit()
         // Integrate PDF over bin
         RooAbsReal* integral = dscb.createIntegral(
                 RooArgSet(x),
-                RooFit::Range("binRange")
+                NormSet(x),
+                Range("binRange")
                 );
 
-        x.setVal(binCenter);
+        double fitVal = integral->getVal() * Ntot;
 
-        double fitVal = dscb.getVal(obs) * Ntot * binWidth;;
+
+
         double residual = dataVal - fitVal;
 
         hResidual->SetBinContent(i, residual);
@@ -113,6 +115,8 @@ void fit_DSCB_RooFit()
         delete integral;
 
     }
+    //}}}
+
 
     // ----------------------------------------------------------
     // 6. Plot the fit result
@@ -148,19 +152,18 @@ void fit_DSCB_RooFit()
     frame->GetXaxis()->SetLabelSize(0);
     frame->Draw();
 
-
     double chi2 = frame->chiSquare("dscb", "data");
     std::cout << "\nChi2/Ndof = " << chi2 << std::endl;
 
 
-    TLegend *leg = new TLegend(0.6, 0.75, 0.88, 0.88);
+    TLegend *leg = new TLegend(0.60, 0.75, 0.88, 0.88);
     leg->SetBorderSize(0);
     leg->SetFillStyle(0);
     leg->AddEntry(frame->getObject(0), "Signal (MC)", "lep"); // data points
     leg->AddEntry(frame->getObject(1), "DSCB fit",    "l");   // fit curve
     leg->Draw();
 
-    TPaveText *pt = new TPaveText(0.6, 0.45, 0.88, 0.73, "NDC");
+    TPaveText *pt = new TPaveText(0.60, 0.45, 0.88, 0.73, "NDC");
     pt->SetBorderSize(0);
     pt->SetFillColor(0);
     pt->SetTextAlign(12);
@@ -199,8 +202,8 @@ void fit_DSCB_RooFit()
     line->SetLineStyle(2);
     line->Draw("same");
 
-    c->SaveAs("DSCB_fit_RooFit.png");
 
+    c->SaveAs("DSCB_fit_RooFit.png");
 
     // ----------------------------------------------------------
     // 7. Print parameters
@@ -219,13 +222,26 @@ void fit_DSCB_RooFit()
     // ----------------------------------------------------------
     // 8. Save everything into a RooWorkspace for Combine
     // ----------------------------------------------------------
+    // Find the bin numbers corresponding to the range [700, 2000]
+    int bin_start = h->GetXaxis()->FindBin(700.0);
+    int bin_end   = h->GetXaxis()->FindBin(2000.0);
+
+    // Integrate only within those bins
+    double Nsig = h->Integral(bin_start, bin_end);
+
+
+    RooRealVar nsig("nsig", "signal yield", Nsig, 0.0, 10.0*Nsig);
+    RooExtendPdf sig_ext("sig_ext", "extended signal pdf", dscb, nsig);
+
     RooWorkspace ws("ws", "workspace");
     ws.import(x);
-    ws.import(dscb);
-    ws.import(data);
+    //ws.import(dscb);
+    //ws.import(data);
+    ws.import(sig_ext); 
 
     ws.writeToFile("signal_DSCB_workspace.root");
 
+    std::cout << "Signal Yield in [700, 2000]: " << Nsig << std::endl;
     std::cout << "\nWorkspace saved to: signal_DSCB_workspace.root\n";
     f->Close();
 }
