@@ -71,7 +71,7 @@ void fit_DSCB_RooFit()
     // ----------------------------------------------------------
     // 5. Fit the model to the data
     // ----------------------------------------------------------
-    x.setRange("fitRange", 400, 3000);
+    x.setRange("fitRange", 700, 3000);
     dscb.fitTo(data, SumW2Error(kTRUE), PrintLevel(-1), Range("fitRange"));
 
     //{{{    // ----------------------------------------------------------
