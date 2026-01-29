@@ -160,9 +160,7 @@ void Run2017BCDEF::Loop()
 
         TLorentzVector M_p4 = gamma_p4 + jet_p4;
         hM->Fill(M_p4.M());
-      //  if ( M_p4.M() > 700 ){
-      //      hM_700->Fill(M_p4.M());
-      //  }
+      
     }//for (Long64_t jentry=0; jentry<nentries;jentry++)
 
     //    int bin_low  = hM->GetXaxis()->FindBin(signal_low);
@@ -309,14 +307,8 @@ void Run2017BCDEF::Loop()
     c1->SaveAs("Invariant_Mass_gJet.png");
 
 
-//    TCanvas *c2 = new TCanvas("c2", "Invariant Mass #gamma + Jet", 600, 700);
-//    hM_700->Draw("E");
-//    c2->SetLogy();
-//    c2->SaveAs("Invariant_Mass_gJet_700.png");
-
     TFile *fOut = new TFile("Run2017BCDEF_BG_ana.root", "RECREATE");
     hM->Write();
-    //hM_700->Write();
     bkgFit->Write("bkgFit");
     fOut->Close();
     delete fOut;
