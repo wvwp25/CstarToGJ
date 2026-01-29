@@ -31,7 +31,7 @@ void SetCMSStyle(){
 
 void CMS_label(double x = 0.08, double y = 0.88,
         const char *text = "Preliminary",
-        double sqrts = 13.0)
+        double lumi_fb = 41.8, double sqrts = 13.0)
 {
     TLatex latex;
     latex.SetNDC();
@@ -43,13 +43,13 @@ void CMS_label(double x = 0.08, double y = 0.88,
     latex.DrawLatex(x + 0.06, y, text);
 
     latex.SetTextFont(42);  // regular font
-    TString lumiText = Form("%g TeV", sqrts);
+    TString lumiText = Form("%.1f fb^{-1} (%g TeV)", lumi_fb, sqrts);
     latex.SetTextSize(0.04);
     latex.DrawLatex(0.75, 0.95, lumiText);
 }//void CMS_label
 
-double lumi = 41800.0; 
-double xsec = 1.291e-02; 
+double lumi_pb = 41800.0;
+double xsec = 1.238e-02;
 
 void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
 {
@@ -57,27 +57,31 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     if (fChain == 0) return;
 
     TH1F *hM_gen   = new TH1F("hM_gen",   "GEN M(#gamma + jet);M^{GEN}_{#gamma j} (GeV);Events",   500, 0., 3000.);
+    TH1F *hM_reco  = new TH1F("hM_reco",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
     TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events", 100, 500, 3000);
-    TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 300, 0., 3000.);
+    TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
+    TH1F *hM_reco_selected_woWeight = new TH1F("hM_reco_selected_woWeight", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
 
     TH1F *hPhoton_pt = new TH1F("hPhoton_pT", "Photon p_{T};p_{T}^{photon} (GeV);Events", 500, 0., 1500.);
     TH1F *hJet_pt = new TH1F("hJet_pT", "Jet p_{T};p_{T}^{jet} (GeV);Events", 500, 0., 1500.);
 
     hM_gen ->Sumw2();
+    hM_reco->Sumw2();
     hPhoton_pt->Sumw2();
     hJet_pt->Sumw2();
     hM_reco_selected->Sumw2();
+    hM_reco_selected_woWeight->Sumw2();
 
     double sum_genWeight = 0.0;
 
     Long64_t nentries = fChain->GetEntriesFast();
-    
+
     for (Long64_t jentry = 0; jentry < nentries; jentry++) {
-    LoadTree(jentry);
-    fChain->GetEntry(jentry);
-    sum_genWeight += genWeight;
-}
-std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
+        LoadTree(jentry);
+        fChain->GetEntry(jentry);
+        sum_genWeight += genWeight;
+    }
+    std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
 
 
     Long64_t nbytes = 0, nb = 0;
@@ -87,7 +91,7 @@ std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
         nb = fChain->GetEntry(jentry);   nbytes += nb;
         // if (Cut(ientry) < 0) continue;
 
-        double weight = lumi * xsec * genWeight / sum_genWeight;
+        double weight = lumi_pb * xsec * genWeight / sum_genWeight;
 
         if (nPhoton < 1 || nJet < 1 || nGenPart <= 0 || nGenJet <= 0)   continue;
 
@@ -128,7 +132,7 @@ std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
         cstar_p4.SetPtEtaPhiM(GenPart_pt[cstarIdx], GenPart_eta[cstarIdx], GenPart_phi[cstarIdx], GenPart_mass[cstarIdx]);
         h_M_cstar->Fill(cstar_p4.M(), weight);
 
-        //Match Gen charm → GenJet
+        //Match Gen charm GenJet
         TLorentzVector c_p4, GenJet_p4;
 
         int genJetIdx = -1;
@@ -160,7 +164,7 @@ std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
         int goodPhotonIdx = -1;
         float leadingPhotonPt = -1.0;
 
-        for (UInt_t i= 0; i< nPhoton; ++i){
+        for (int i= 0; i< nPhoton; ++i){
             if (Photon_pt[i] < 240) continue;
             if (fabs(Photon_eta[i]) >= 1.4442) continue;
             if (Photon_cutBased[i] < 2) continue;
@@ -179,16 +183,16 @@ std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
         // Jet selection
         std::vector<int> goodJets;
 
-        for (UInt_t i= 0; i < nJet; ++i){
+        for (int i= 0; i < nJet; ++i){
             if (Jet_pt[i] < 170) continue;
-            if (Jet_eta[i] >= 2.4) continue;
+            if (fabs(Jet_eta[i]) >= 2.4) continue;
             if (Jet_jetId[i] < 6) continue;
             if (Jet_btagDeepFlavCvB[i] < 0.340) continue;
             if (Jet_btagDeepFlavCvL[i] < 0.085) continue;
             TLorentzVector j_p4;
             j_p4.SetPtEtaPhiM(Jet_pt[i], Jet_eta[i], Jet_phi[i], Jet_mass[i]);
 
-            if (g_p4.DeltaR(j_p4) <= 1.1) continue;
+            if (g_p4.DeltaR(j_p4) <= 0.4) continue;
             goodJets.push_back(i);
         }
 
@@ -215,9 +219,13 @@ std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
 
         TLorentzVector reco_m_p4 = reco_g_p4 + reco_j_p4;
         hM_reco_selected -> Fill(reco_m_p4.M(), weight);
+        hM_reco_selected_woWeight -> Fill(reco_m_p4.M());
 
         hPhoton_pt->Fill(Photon_pt[goodPhotonIdx], weight);
         hJet_pt->Fill(Jet_pt[goodJetIdx], weight);
+
+
+
 
     }//jentry
 
@@ -263,6 +271,13 @@ std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
     CMS_label(0.18, 0.87);
     c6->SaveAs("Invariant_Mass_reco_selected.png");
 
+TCanvas *c7 = new TCanvas("c7", "Invariant Mass Reco", 600, 400);
+    hM_reco_selected_woWeight->Draw("HIST");
+    hM_reco_selected_woWeight->GetXaxis()->SetTitleOffset(1.4);    // lower x-title
+    hM_reco_selected_woWeight->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c6->SaveAs("Invariant_Mass_reco_selected-woWeight.png");
+
 
 
 
@@ -270,6 +285,7 @@ std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
     h_M_cstar->Write();
     hM_gen->Write();
     hM_reco_selected ->Write();
+    hM_reco_selected_woWeight ->Write();
     hPhoton_pt->Write();
     hJet_pt->Write();
     fOut->Close();
