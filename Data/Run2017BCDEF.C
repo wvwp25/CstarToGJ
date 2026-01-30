@@ -35,7 +35,7 @@ void SetCMSStyle(){
 
 void CMS_label(double x = 0.08, double y = 0.88,
         const char *text = "Preliminary",
-        double lumi = 41.78, double sqrts = 13.0)
+        double lumi = 20.9, double sqrts = 13.0)
 {
     TLatex latex;
     latex.SetNDC();
@@ -44,7 +44,7 @@ void CMS_label(double x = 0.08, double y = 0.88,
     latex.DrawLatex(x, y, "CMS");
 
     latex.SetTextFont(52);  // italic for "Preliminary"
-    latex.DrawLatex(x + 0.06, y, text);
+    latex.DrawLatex(x + 0.08, y, text);
 
     latex.SetTextFont(42);  // regular font
     TString lumiText = Form("%.1f fb^{-1} (%g TeV)", lumi, sqrts);
@@ -53,10 +53,11 @@ void CMS_label(double x = 0.08, double y = 0.88,
 }//void CMS_label
 
 
-float sigma = 31.3;
+float sigmaL = 37.5;
+float sigmaL = 31.6;
 float signal_mass = 1000.0;
-float signal_low = signal_mass - 3* sigma;
-float signal_high = signal_mass + 3* sigma;
+float signal_low = signal_mass - 3* sigmaL;
+float signal_high = signal_mass + 3* sigmaR;
 
 
 
