@@ -60,8 +60,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     TH1F *hM_reco  = new TH1F("hM_reco",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
     TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events", 100, 500, 3000);
     TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
-    TH1F *hM_reco_selected_woWeight = new TH1F("hM_reco_selected_woWeight", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
-
+    
     TH1F *hPhoton_pt = new TH1F("hPhoton_pT", "Photon p_{T};p_{T}^{photon} (GeV);Events", 500, 0., 1500.);
     TH1F *hJet_pt = new TH1F("hJet_pT", "Jet p_{T};p_{T}^{jet} (GeV);Events", 500, 0., 1500.);
 
@@ -70,7 +69,6 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     hPhoton_pt->Sumw2();
     hJet_pt->Sumw2();
     hM_reco_selected->Sumw2();
-    hM_reco_selected_woWeight->Sumw2();
 
     double sum_genWeight = 0.0;
 
@@ -219,7 +217,6 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
 
         TLorentzVector reco_m_p4 = reco_g_p4 + reco_j_p4;
         hM_reco_selected -> Fill(reco_m_p4.M(), weight);
-        hM_reco_selected_woWeight -> Fill(reco_m_p4.M());
 
         hPhoton_pt->Fill(Photon_pt[goodPhotonIdx], weight);
         hJet_pt->Fill(Jet_pt[goodJetIdx], weight);
@@ -271,13 +268,6 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     CMS_label(0.18, 0.87);
     c6->SaveAs("Invariant_Mass_reco_selected.png");
 
-TCanvas *c7 = new TCanvas("c7", "Invariant Mass Reco", 600, 400);
-    hM_reco_selected_woWeight->Draw("HIST");
-    hM_reco_selected_woWeight->GetXaxis()->SetTitleOffset(1.4);    // lower x-title
-    hM_reco_selected_woWeight->GetXaxis()->SetLabelOffset(0.02);
-    CMS_label(0.18, 0.87);
-    c6->SaveAs("Invariant_Mass_reco_selected-woWeight.png");
-
 
 
 
@@ -285,7 +275,6 @@ TCanvas *c7 = new TCanvas("c7", "Invariant Mass Reco", 600, 400);
     h_M_cstar->Write();
     hM_gen->Write();
     hM_reco_selected ->Write();
-    hM_reco_selected_woWeight ->Write();
     hPhoton_pt->Write();
     hJet_pt->Write();
     fOut->Close();
