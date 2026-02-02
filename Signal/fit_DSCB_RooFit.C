@@ -71,7 +71,7 @@ void fit_DSCB_RooFit()
     // ----------------------------------------------------------
     // 5. Fit the model to the data
     // ----------------------------------------------------------
-    x.setRange("fitRange", 700, 3000);
+    x.setRange("fitRange", 700, 1300);
     dscb.fitTo(data, SumW2Error(kTRUE), PrintLevel(-1), Range("fitRange"));
 
     //{{{    // ----------------------------------------------------------
@@ -94,13 +94,15 @@ void fit_DSCB_RooFit()
         double binWidth  = h->GetBinWidth(i);
 
         // Set integration range
-        x.setRange("binRange", binLow, binUp);
+        TString rname = Form("bin_%d", i);
+        x.setRange(rname, binLow, binUp);
+        RooAbsReal* integral = dscb.createIntegral(x, NormSet(x), Range(rname));
 
         // Integrate PDF over bin
         RooAbsReal* integral = dscb.createIntegral(
-                RooArgSet(x),
+                x,
                 NormSet(x),
-                Range("binRange")
+                Range("rname")
                 );
 
         double fitVal = integral->getVal() * Ntot;
@@ -137,14 +139,19 @@ void fit_DSCB_RooFit()
 
     pad1->cd();
 
-    RooPlot *frame = x.frame(Bins(60), Title("DSCB fit to C* signal"));
+    const char* fr = "fitRange";
+    RooPlot *frame = x.frame(Range(fr), Bins(60), Title("DSCB fit to C* signal"));
     data.plotOn(frame, Name("data"),
+            Range(fr),
+            DataError(RooAbsData::SumW2),
             MarkerStyle(20),
             MarkerSize(0.8),
             MarkerColor(kBlack),
             LineColor(kBlack));
 
     dscb.plotOn(frame, Name("dscb"),
+            Range(fr),
+            NormRange(fr),
             LineColor(kRed),
             LineWidth(2));
     frame->GetXaxis()->SetTitle("");
@@ -152,7 +159,7 @@ void fit_DSCB_RooFit()
     frame->GetXaxis()->SetLabelSize(0);
     frame->Draw();
 
-    double chi2 = frame->chiSquare("dscb", "data");
+    double chi2 = frame->chiSquare("dscb", "data",7);
     std::cout << "\nChi2/Ndof = " << chi2 << std::endl;
 
 
@@ -203,7 +210,7 @@ void fit_DSCB_RooFit()
     line->Draw("same");
 
 
-    c->SaveAs("DSCB_fit_RooFit.png");
+    c->SaveAs("DSCB_fit_RooFit_M1000.png");
 
     // ----------------------------------------------------------
     // 7. Print parameters
@@ -222,9 +229,9 @@ void fit_DSCB_RooFit()
     // ----------------------------------------------------------
     // 8. Save everything into a RooWorkspace for Combine
     // ----------------------------------------------------------
-    // Find the bin numbers corresponding to the range [700, 3000]
+    // Find the bin numbers corresponding to the range [700, 1300]
     int bin_start = h->GetXaxis()->FindBin(700.0);
-    int bin_end   = h->GetXaxis()->FindBin(3000.0);
+    int bin_end   = h->GetXaxis()->FindBin(1300.0);
 
     // Integrate only within those bins
     double Nsig = h->Integral(bin_start, bin_end);
@@ -241,7 +248,7 @@ void fit_DSCB_RooFit()
 
     ws.writeToFile("signal_DSCB_workspace.root");
 
-    std::cout << "Signal Yield in [700, 3000]: " << Nsig << std::endl;
+    std::cout << "Signal Yield in [700, 1300]: " << Nsig << std::endl;
     std::cout << "\nWorkspace saved to: signal_DSCB_workspace.root\n";
     f->Close();
 }
