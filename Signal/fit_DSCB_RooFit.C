@@ -98,16 +98,7 @@ void fit_DSCB_RooFit()
         x.setRange(rname, binLow, binUp);
         RooAbsReal* integral = dscb.createIntegral(x, NormSet(x), Range(rname));
 
-        // Integrate PDF over bin
-        RooAbsReal* integral = dscb.createIntegral(
-                x,
-                NormSet(x),
-                Range("rname")
-                );
-
         double fitVal = integral->getVal() * Ntot;
-
-
 
         double residual = dataVal - fitVal;
 
