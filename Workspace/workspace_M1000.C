@@ -30,8 +30,8 @@ void workspace_M1000() {
     // ----------------------------
     // PDFs
     // ----------------------------
-    RooAbsPdf* sig = w_sig->pdf("sig_ext");
-    RooAbsPdf* bkg = w_bkg->pdf("bkg_ext");
+    RooAbsPdf* sig = w_sig->pdf("dscb");
+    RooAbsPdf* bkg = w_bkg->pdf("bkg");
 
     // ----------------------------
     // Data
