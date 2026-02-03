@@ -25,7 +25,7 @@ void workspace_M1000() {
     // Observable
     // ----------------------------
     RooRealVar* x = w_sig->var("x");
-    x->setRange(700, 3000);
+    //x->setRange(700, 3000);
 
     // ----------------------------
     // PDFs

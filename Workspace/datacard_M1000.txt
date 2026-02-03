@@ -1,0 +1,22 @@
+imax 1
+jmax 1
+kmax *
+
+---------------------------------
+shapes data_obs  *  Cstar_GammaJet_M1000.root w:data_obs
+shapes sig       *  Cstar_GammaJet_M1000.root w:dscb
+shapes bkg       *  Cstar_GammaJet_M1000.root w:bkg
+---------------------------------
+
+bin         bin1
+observation -1
+
+---------------------------------
+bin             bin1    bin1
+process         sig     bkg
+process         0       1
+rate            83.41   55649
+---------------------------------
+
+lumi_13TeV lnN 1.025    -
+
