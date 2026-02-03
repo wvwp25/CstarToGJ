@@ -34,6 +34,9 @@ void fit_DSCB_RooFit()
     if (!h) { std::cerr << "Histogram not found!" << std::endl; return; }
 
     // rms and mean for initial guesses
+    double M = 1000.0; //GeV
+    double xmin_fit = M - 300.0;
+    double xmax_fit = M + 300.0;
     double xmin = h->GetXaxis()->GetXmin();
     double xmax = h->GetXaxis()->GetXmax();
     double peak = h->GetBinCenter(h->GetMaximumBin());
@@ -43,6 +46,7 @@ void fit_DSCB_RooFit()
     // 2. Define RooFit observable (mass)
     // ----------------------------------------------------------
     RooRealVar x("x", "M_{#gamma+jet} [GeV]", xmin, xmax);
+    RooRealVar x_fit("x", "M_{#gamma+jet} [GeV]", xmin_fit, xmax_fit);
 
     // Convert TH1F to RooDataHist
     RooDataHist data("data", "dataset", x, h);
@@ -71,6 +75,7 @@ void fit_DSCB_RooFit()
     // ----------------------------------------------------------
     // 5. Fit the model to the data
     // ----------------------------------------------------------
+    x.setRange("fullRange", 0, 3000);
     x.setRange("fitRange", 700, 1300);
     dscb.fitTo(data, SumW2Error(kTRUE), PrintLevel(-1), Range("fitRange"));
 
@@ -104,7 +109,7 @@ void fit_DSCB_RooFit()
 
         hResidual->SetBinContent(i, residual);
         hResidual->SetBinError(i, dataErr);//??
-
+        hResidual->GetXaxis()->SetRangeUser(0, 3000);
         delete integral;
 
     }
@@ -130,10 +135,9 @@ void fit_DSCB_RooFit()
 
     pad1->cd();
 
-    const char* fr = "fitRange";
-    RooPlot *frame = x.frame(Range(fr), Bins(60), Title("DSCB fit to C* signal"));
+    RooPlot *frame = x.frame(Range("fullRange"), Bins(60), Title("DSCB fit to C* signal"));
     data.plotOn(frame, Name("data"),
-            Range(fr),
+            Range("fullRange"),
             DataError(RooAbsData::SumW2),
             MarkerStyle(20),
             MarkerSize(0.8),
@@ -141,13 +145,14 @@ void fit_DSCB_RooFit()
             LineColor(kBlack));
 
     dscb.plotOn(frame, Name("dscb"),
-            Range(fr),
-            NormRange(fr),
+            Range("fitRange"),
+            NormRange("fitRange"),
             LineColor(kRed),
             LineWidth(2));
     frame->GetXaxis()->SetTitle("");
     frame->GetYaxis()->SetTitle("Events");
     frame->GetXaxis()->SetLabelSize(0);
+    frame->GetXaxis()->SetRangeUser(0,3000);
     frame->Draw();
 
     double chi2 = frame->chiSquare("dscb", "data",7);
@@ -194,8 +199,8 @@ void fit_DSCB_RooFit()
     hResidual->Draw("PE");
 
     TLine* line = new TLine(
-            x.getMin(),0,
-            x.getMax(),0
+            0,0,
+            3000,0
             );
     line->SetLineStyle(2);
     line->Draw("same");
@@ -221,8 +226,8 @@ void fit_DSCB_RooFit()
     // 8. Save everything into a RooWorkspace for Combine
     // ----------------------------------------------------------
     // Find the bin numbers corresponding to the range [700, 1300]
-    int bin_start = h->GetXaxis()->FindBin(700.0);
-    int bin_end   = h->GetXaxis()->FindBin(1300.0);
+    int bin_start = h->GetXaxis()->FindBin(xmin_fit);
+    int bin_end   = h->GetXaxis()->FindBin(xmax_fit);
 
     // Integrate only within those bins
     double Nsig = h->Integral(bin_start, bin_end);
@@ -232,7 +237,7 @@ void fit_DSCB_RooFit()
     RooExtendPdf sig_ext("sig_ext", "extended signal pdf", dscb, nsig);
 
     RooWorkspace ws("ws", "workspace");
-    ws.import(x);
+    ws.import(x_fit);
     //ws.import(dscb);
     //ws.import(data);
     ws.import(sig_ext); 
