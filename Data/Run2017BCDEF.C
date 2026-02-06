@@ -25,11 +25,9 @@ void Run2017BCDEF::Loop()
     if (fChain == 0) return;
 
     TH1F *hM = new TH1F ("hM", "Invariant Mass #gamma + Jet ; m_{#gamma+Jet}[GeV]; Events", 1000, 0, 3000);
-
     hM->Sumw2();
 
     Long64_t nentries = fChain->GetEntriesFast();
-
     Long64_t nbytes = 0, nb = 0;
 
     const bool useFraction = true;  // set to false when you unblind
@@ -39,7 +37,6 @@ void Run2017BCDEF::Loop()
         Long64_t ientry = LoadTree(jentry);
         if (ientry < 0) break;
         nb = fChain->GetEntry(jentry);   nbytes += nb;
-        // if (Cut(ientry) < 0) continue;
 
         //photon selection
         int goodPhotonIdx = -1;
@@ -98,33 +95,33 @@ void Run2017BCDEF::Loop()
 
         TLorentzVector M_p4 = gamma_p4 + jet_p4;
         hM->Fill(M_p4.M());
-        hM->Scale(lumiScale);
     }//for (Long64_t jentry=0; jentry<nentries;jentry++)
 
 
-    SetCMSStyle();
+    hM->Scale(lumiScale);
 
+    SetCMSStyle();
     gROOT->SetBatch(kTRUE); // run without opening any windows
 
     TCanvas *c1 = new TCanvas("c1", "Invariant Mass #gamma + Jet", 600, 700);
-
+    c1->cd();
 
     hM->Draw("E");
     hM->GetXaxis()->SetTitleOffset(1.4);
     hM->GetXaxis()->SetLabelOffset(0.02);
     hM->GetXaxis()->SetTitle("m_{#gamma+Jet} [GeV]");
     hM->GetXaxis()->SetTitleSize(0.12);
-    
+
+    CMS_label(0.18, 0.87, lumi, 13.0);
+
     c1->SaveAs("Invariant_Mass_gJet.png");
 
     TFile *fOut = new TFile("Run2017BCDEF_BG_ana.root", "RECREATE");
     hM->Write();
-    TParameter<double> pLumi("lumi_fb", lumi);
-    pLumi.Write();
-    TParameter<double> pLumiScale("lumiScale", lumiScale);
-    pLumiScale.Write();
-    TParameter<int>    pFraction("fraction", fraction);
-    pFraction.Write();
+    TParameter<double>("lumi_fb", lumi).Write();
+    TParameter<double>("lumiScale", lumiScale).Write();
+    TParameter<int>("fraction", fraction).Write();
+
     fOut->Close();
     delete fOut;
 
