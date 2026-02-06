@@ -14,6 +14,11 @@
 #include <TLine.h>
 #include <iostream>
 
+const double lumiScale = 4.0;
+const int  fraction    = 1;   // use 1/fraction of events, i.e. 1/10
+double lumi = 41.78 * lumiScale / fraction;
+double sqrts = 13.0;
+
 void SetCMSStyle(){
     //test
     //gStyle->SetOptStat(0);   // no stat box
@@ -34,8 +39,7 @@ void SetCMSStyle(){
 }//void SetCMSStyle()
 
 void CMS_label(double x = 0.08, double y = 0.88,
-        const char *text = "Preliminary",
-        double lumi = 20.9, double sqrts = 13.0)
+        double sqrts = 13.0)
 {
     TLatex latex;
     latex.SetNDC();
@@ -44,7 +48,7 @@ void CMS_label(double x = 0.08, double y = 0.88,
     latex.DrawLatex(x, y, "CMS");
 
     latex.SetTextFont(52);  // italic for "Preliminary"
-    latex.DrawLatex(x + 0.08, y, text);
+    latex.DrawLatex(x + 0.07, y, "Preliminary");
 
     latex.SetTextFont(42);  // regular font
     TString lumiText = Form("%.1f fb^{-1} (%g TeV)", lumi, sqrts);
@@ -53,49 +57,20 @@ void CMS_label(double x = 0.08, double y = 0.88,
 }//void CMS_label
 
 
-float sigmaL = 37.5;
-float sigmaL = 31.6;
-float signal_mass = 1000.0;
-float signal_low = signal_mass - 3* sigmaL;
-float signal_high = signal_mass + 3* sigmaR;
-
-
-
-Double_t backgroundFunction(Double_t *x, Double_t *par) {
-    Double_t m = x[0]; // Invariant mass
-    Double_t sqrt_s = 13000.0;
-    Double_t m_over_sqrt_s = m / sqrt_s;
-
-    Double_t P0 = par[0]; // Normalization
-    Double_t P1 = par[1]; // Exponent for (1 - m/sqrt_s)
-    Double_t P2 = par[2]; // Constant term in denominator exponent
-    Double_t P3 = par[3]; // Logarithmic term coefficient
-
-    Double_t numerator = P0 * TMath::Power(1.0 - m_over_sqrt_s, P1);
-    Double_t denominator = TMath::Power(m_over_sqrt_s, P2 + P3 * TMath::Log(m_over_sqrt_s));
-
-    if (denominator == 0) return 0; // Avoid division by zero
-    return numerator / denominator;
-}
-
 
 void Run2017BCDEF::Loop()
 {
     if (fChain == 0) return;
 
     TH1F *hM = new TH1F ("hM", "Invariant Mass #gamma + Jet ; m_{#gamma+Jet}[GeV]; Events", 1000, 0, 3000);
-   // TH1F *hM_700 = new TH1F ("hM_700", "Invariant Mass #gamma + Jet ; m_{#gamma+Jet}[GeV]; Events", 1000, 0, 3000);
 
     hM->Sumw2();
-   // hM_700->Sumw2();
-
 
     Long64_t nentries = fChain->GetEntriesFast();
 
     Long64_t nbytes = 0, nb = 0;
 
     const bool useFraction = true;  // set to false when you unblind
-    const int  fraction    = 2;   // use 1/fraction of events, i.e. 1/10
 
     for (Long64_t jentry=0; jentry<nentries;jentry++) {
         if (useFraction && (jentry % fraction != 0)) continue; //take only 1/10 of events
@@ -160,106 +135,23 @@ void Run2017BCDEF::Loop()
         jet_p4.SetPtEtaPhiM(Jet_pt[goodJetIdx], Jet_eta[goodJetIdx], Jet_phi[goodJetIdx], Jet_mass[goodJetIdx]);
 
         TLorentzVector M_p4 = gamma_p4 + jet_p4;
-        hM->Fill(M_p4.M());
-      
+        hM->Fill(M_p4.M(), lumiScale);
+
     }//for (Long64_t jentry=0; jentry<nentries;jentry++)
-
-    //    int bin_low  = hM->GetXaxis()->FindBin(signal_low);
-    //    int bin_high = hM->GetXaxis()->FindBin(signal_high);
-
-    //    for (int bin = bin_low; bin <= bin_high; ++bin) {
-    //        hM->SetBinContent(bin, 0);
-    //        hM->SetBinError(bin, 0);
-    //    }
-
-
-
-    ///for (Long64_t jentry=0; jentry<nentries;jentry++)
-
-    // ********** Fitting **********
-
-    TF1 *bkgFit = new TF1("bkgFit", backgroundFunction, 700, 3000, 4);
-
-    bkgFit->SetParameters(0.4, 18, 4, 0.2); // Initial guesses for P0, P1, P2, P3
-    bkgFit->SetParNames("P0", "P1", "P2", "P3");
-
-    // Set reasonable parameter ranges to stabilize the fit
-    bkgFit->SetParLimits(0, 0.01, 1e6);  // P0: Normalization, positive
-    bkgFit->SetParLimits(1, 1.0, 30.0);   // P1: Exponent, reasonable range
-    bkgFit->SetParLimits(2, 0.1, 10.0);   // P2: Denominator exponent
-    bkgFit->SetParLimits(3, -5.0, 5.0);   // P3: Logarithmic coefficient
-
-
-    //    hM->Fit(bkgFit, "IR", "", 700, signal_low); // "R" for range-based fit (0 to 300 GeV)
-    //    hM->Fit(bkgFit, "IR+", "", signal_high, 3000); // "R" for range-based fit (0 to 300 GeV)
-    TFitResultPtr r1 = hM->Fit(bkgFit, "IRS", "", 700, signal_low); 
-    TFitResultPtr r2 = hM->Fit(bkgFit, "IRS+", "", signal_high, 3000); 
-
-    //TFitResultPtr r3 = hM_700->Fit(bkgFit, "IRS", "", 700, signal_low); 
-    //TFitResultPtr r4 = hM_700->Fit(bkgFit, "IRS+", "", signal_high, 3000); 
-
-    double chi2 = r2->Chi2();
-    int ndof = r2->Ndf();
-
-    std::cout << "Background Fit Results:" << std::endl;
-    std::cout << "Chi2: " << chi2 << std::endl;
-    std::cout << "NDF: " << ndof << std::endl;
-    std::cout << "Chi2/NDF: " << chi2/ndof << std::endl;
 
 
     SetCMSStyle();
 
     gROOT->SetBatch(kTRUE); // run without opening any windows
 
-
-    const double fit_low1  = 700.0;
-    const double fit_high1 = signal_low;
-
-    const double fit_low2  = signal_high;
-    const double fit_high2 = 3000.0;
-
-    TH1F* hPull = (TH1F*)hM->Clone("hPull");
-    hPull->Reset();
-    hPull->SetStats(0);
-    hPull->SetTitle("");
-
-    for (int i = 1; i <= hM->GetNbinsX(); ++i) {
-
-        double data    = hM->GetBinContent(i);
-        double error   = hM->GetBinError(i);
-        double center  = hM->GetBinCenter(i);
-        double width   = hM->GetBinWidth(i);
-
-        // ---- only show pull in fitted regions ----
-        bool inFitRange =
-            (center >= fit_low1  && center <= fit_high1) ||
-            (center >= fit_low2  && center <= fit_high2);
-
-        if (!inFitRange) continue;
-
-        double fitVal = bkgFit->Eval(center) ;
-
-        double pull = (data - fitVal);
-        hPull->SetBinContent(i, pull);
-        hPull->SetBinError(i, 1.0);  // pull has unit variance
-    }
-
     TCanvas *c1 = new TCanvas("c1", "Invariant Mass #gamma + Jet", 600, 700);
 
     TPad* pad1 = new TPad("pad1", "top", 0, 0.3, 1, 1.0);
-    TPad* pad2 = new TPad("pad2", "bottom", 0, 0.0, 1, 0.3);
 
     pad1->SetBottomMargin(0.12);
     pad1->SetLeftMargin(0.12);
     pad1->SetRightMargin(0.05);
-
-    pad2->SetTopMargin(0.05);
-    pad2->SetBottomMargin(0.30);
-    pad2->SetLeftMargin(0.12);
-    pad2->SetRightMargin(0.05);
-
     pad1->Draw();
-    pad2->Draw();
 
     pad1->cd();
     hM->Draw("E");
@@ -277,40 +169,11 @@ void Run2017BCDEF::Loop()
     pt_chi->Draw();
 
 
-    pad2->cd();
-
-    hPull->GetYaxis()->SetTitle("Data - Fit");
-    hPull->GetYaxis()->SetTitleSize(0.12);
-    hPull->GetYaxis()->SetLabelSize(0.10);
-    hPull->GetYaxis()->SetTitleOffset(0.45);
-    hPull->GetYaxis()->SetRangeUser(-5, 5);
-    hPull->GetYaxis()->SetNdivisions(505);
-
-    hPull->GetXaxis()->SetTitle("m_{#gamma+Jet} [GeV]");
-    hPull->GetXaxis()->SetTitleSize(0.12);
-    hPull->GetXaxis()->SetLabelSize(0.10);
-    hPull->GetXaxis()->SetTitleOffset(1.0);
-
-    hPull->SetMarkerStyle(20);
-    hPull->SetMarkerSize(0.9);
-
-
-    //hPull->Draw("PE");
-
-    // zero line
-    TLine* line = new TLine(
-            hPull->GetXaxis()->GetXmin(), 0,
-            hPull->GetXaxis()->GetXmax(), 0
-            );
-    line->SetLineStyle(2);
-    line->Draw("same");
-
     c1->SaveAs("Invariant_Mass_gJet.png");
-
 
     TFile *fOut = new TFile("Run2017BCDEF_BG_ana.root", "RECREATE");
     hM->Write();
-    bkgFit->Write("bkgFit");
+    lumi->Write();
     fOut->Close();
     delete fOut;
 
