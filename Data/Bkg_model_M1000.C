@@ -38,8 +38,8 @@ static void CMS_label(double x, double y, double lumi_fb, double sqrts_TeV=13.0)
     latex.DrawLatex(x + 0.07, y, "Preliminary");
 
     latex.SetTextFont(42);
-    latex.DrawLatex(0.65, 0.93, Form("%.1f fb^{-1} (%g TeV)", lumi_fb, sqrts_TeV));
-    latex.SetTextSize(0.028);
+    latex.SetTextSize(0.03);
+    latex.DrawLatex(0.75, 0.93, Form("%.1f fb^{-1} (%g TeV)", lumi_fb, sqrts_TeV));
 }
 
 // Background function used in CMS dijet/gamma+jet style fits
@@ -62,38 +62,38 @@ static Double_t backgroundFunction(Double_t *xx, Double_t *par) {
 }
 
 static void Chi2OverSidebands(const TH1* h, TF1* f,
-                              double fit_low1, double fit_high1,
-                              double fit_low2, double fit_high2,
-                              double &chi2, int &nbin_used, int &ndof)
+        double fit_low1, double fit_high1,
+        double fit_low2, double fit_high2,
+        double &chi2, int &nbin_used, int &ndof)
 {
-  chi2 = 0.0;
-  nbin_used = 0;
+    chi2 = 0.0;
+    nbin_used = 0;
 
-  for (int i = 1; i <= h->GetNbinsX(); ++i) {
-    const double x   = h->GetBinCenter(i);
-    const double y   = h->GetBinContent(i);
-    const double err = h->GetBinError(i);
+    for (int i = 1; i <= h->GetNbinsX(); ++i) {
+        const double x   = h->GetBinCenter(i);
+        const double y   = h->GetBinContent(i);
+        const double err = h->GetBinError(i);
 
-    const bool inFit =
-      (x >= fit_low1 && x <= fit_high1) ||
-      (x >= fit_low2 && x <= fit_high2);
+        const bool inFit =
+            (x >= fit_low1 && x <= fit_high1) ||
+            (x >= fit_low2 && x <= fit_high2);
 
-    if (!inFit) continue;
-    if (err <= 0) continue;
+        if (!inFit) continue;
+        if (err <= 0) continue;
 
-    const double xl = h->GetXaxis()->GetBinLowEdge(i);
-    const double xh = h->GetXaxis()->GetBinUpEdge(i);
+        const double xl = h->GetXaxis()->GetBinLowEdge(i);
+        const double xh = h->GetXaxis()->GetBinUpEdge(i);
 
-    // bin-integrated prediction (consistent with "I" option)
-    const double yfit = f->Integral(xl, xh);
+        // bin-integrated prediction (consistent with "I" option)
+        const double yfit = f->Integral(xl, xh) / (xh - xl);
 
-    const double d = (y - yfit) / err;
-    chi2 += d*d;
-    nbin_used++;
-  }
+        const double d = (y - yfit) / err;
+        chi2 += d*d;
+        nbin_used++;
+    }
 
-  ndof = nbin_used - f->GetNpar();
-  if (ndof < 1) ndof = 1;
+    ndof = nbin_used - f->GetNpar();
+    if (ndof < 1) ndof = 1;
 }
 
 
@@ -134,6 +134,14 @@ void Bkg_model_M1000() {
 
     hM->Sumw2();
 
+    // Mask signal window by inflating errors
+for (int i = 1; i <= hM->GetNbinsX(); ++i) {
+    double x = hM->GetBinCenter(i);
+    if (x > signal_low && x < signal_high) {
+        hM->SetBinError(i, 1e9);  // effectively remove from chi2
+    }
+}
+
     // -------------------------
     // Define TF1 and fit sidebands
     // -------------------------
@@ -157,8 +165,7 @@ void Bkg_model_M1000() {
     int nbin_used = 0;
     int ndof = 0;
 
-    hM->Fit(bkgFit, "IRS0", "", fit_low1, fit_high1);
-hM->Fit(bkgFit, "IRS0+", "", fit_low2, fit_high2);
+TFitResultPtr r = hM->Fit(bkgFit, "SR0", "", fit_min, fit_max);
 
     Chi2OverSidebands(hM, bkgFit, fit_low1, fit_high1, fit_low2, fit_high2,
             chi2, nbin_used, ndof);
