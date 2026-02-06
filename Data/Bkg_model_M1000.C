@@ -38,7 +38,7 @@ static void CMS_label(double x, double y, double lumi_fb, double sqrts_TeV=13.0)
     latex.DrawLatex(x + 0.07, y, "Preliminary");
 
     latex.SetTextFont(42);
-    latex.SetTextSize(0.03);
+    latex.SetTextSize(0.04);
     latex.DrawLatex(0.75, 0.93, Form("%.1f fb^{-1} (%g TeV)", lumi_fb, sqrts_TeV));
 }
 
@@ -85,7 +85,9 @@ static void Chi2OverSidebands(const TH1* h, TF1* f,
         const double xh = h->GetXaxis()->GetBinUpEdge(i);
 
         // bin-integrated prediction (consistent with "I" option)
-        const double yfit = f->Integral(xl, xh) / (xh - xl);
+
+        const double bw   = xh - xl;
+const double yfit = f->Eval(x) * bw;
 
         const double d = (y - yfit) / err;
         chi2 += d*d;
@@ -202,9 +204,12 @@ TFitResultPtr r = hM->Fit(bkgFit, "SR0", "", fit_min, fit_max);
 
         const double data = hM->GetBinContent(i);
         const double err  = hM->GetBinError(i);
-        const double fitv = bkgFit->Eval(x);
+const double xl = hM->GetXaxis()->GetBinLowEdge(i);
+const double xh = hM->GetXaxis()->GetBinUpEdge(i);
+const double bw = xh - xl;
 
-        const double resid = (data - fitv);
+const double fitCount = bkgFit->Eval(x) * bw;
+const double resid    = data - fitCount;
         hResidual->SetBinContent(i, resid);
 
         // residual error: keep data stat error (useful visually)
@@ -261,6 +266,7 @@ TFitResultPtr r = hM->Fit(bkgFit, "SR0", "", fit_min, fit_max);
     pt->SetBorderSize(0);
     pt->SetFillStyle(0);
     pt->SetTextAlign(12);
+    pt->SetTextSize(0.05);
     pt->AddText(Form("#chi^{2}/ndf = %.3f", chi2/ndof));
     pt->Draw();
 
