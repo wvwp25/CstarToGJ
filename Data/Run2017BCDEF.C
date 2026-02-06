@@ -16,9 +16,10 @@
 #include "TParameter.h"
 #include "CMSStyle.h"
 
-SetCMSStyle();
-CMS_label(0.18, 0.87, lumi, 13.0);
-
+const double lumiScale = 4.0;
+const int    fraction  = 1;
+const double lumi_fb   = 41.78;
+const double lumi_plot = lumi_fb * lumiScale;
 
 void Run2017BCDEF::Loop()
 {
@@ -112,13 +113,13 @@ void Run2017BCDEF::Loop()
     hM->GetXaxis()->SetTitle("m_{#gamma+Jet} [GeV]");
     hM->GetXaxis()->SetTitleSize(0.12);
 
-    CMS_label(0.18, 0.87, lumi, 13.0);
+    CMS_label(0.18, 0.87, lumi_plot, 13.0);
 
     c1->SaveAs("Invariant_Mass_gJet.png");
 
     TFile *fOut = new TFile("Run2017BCDEF_BG_ana.root", "RECREATE");
     hM->Write();
-    TParameter<double>("lumi_fb", lumi).Write();
+    TParameter<double>("lumi_fb", lumi_plot).Write();
     TParameter<double>("lumiScale", lumiScale).Write();
     TParameter<int>("fraction", fraction).Write();
 
