@@ -13,49 +13,11 @@
 #include <TLegend.h>
 #include <TLine.h>
 #include <iostream>
+#include "TParameter.h"
+#include "CMSStyle.h"
 
-const double lumiScale = 4.0;
-const int  fraction    = 1;   // use 1/fraction of events, i.e. 1/10
-double lumi = 41.78 * lumiScale / fraction;
-double sqrts = 13.0;
-
-void SetCMSStyle(){
-    //test
-    //gStyle->SetOptStat(0);   // no stat box
-    gStyle->SetTitleFontSize(0.05);
-    gStyle->SetLineWidth(2);
-    gStyle->SetFrameLineWidth(2);
-    gStyle->SetLabelSize(0.045,"XY");
-    gStyle->SetTitleSize(0.05,"XY");
-    gStyle->SetPadTopMargin(0.08);
-    gStyle->SetPadBottomMargin(0.12);
-    gStyle->SetPadLeftMargin(0.12);
-    gStyle->SetPadRightMargin(0.05);
-    gStyle->SetStatX(0.92);   // x=0.92 (right)
-    gStyle->SetStatY(0.90);   // y=0.60 (lower than before)
-    gStyle->SetStatW(0.20);   // width
-    gStyle->SetStatH(0.15);   // height
-
-}//void SetCMSStyle()
-
-void CMS_label(double x = 0.08, double y = 0.88,
-        double sqrts = 13.0)
-{
-    TLatex latex;
-    latex.SetNDC();
-    latex.SetTextSize(0.045);
-    latex.SetTextFont(62);  // bold for "CMS"
-    latex.DrawLatex(x, y, "CMS");
-
-    latex.SetTextFont(52);  // italic for "Preliminary"
-    latex.DrawLatex(x + 0.07, y, "Preliminary");
-
-    latex.SetTextFont(42);  // regular font
-    TString lumiText = Form("%.1f fb^{-1} (%g TeV)", lumi, sqrts);
-    latex.SetTextSize(0.04);
-    latex.DrawLatex(0.75, 0.93, lumiText);
-}//void CMS_label
-
+SetCMSStyle();
+CMS_label(0.18, 0.87, lumi, 13.0);
 
 
 void Run2017BCDEF::Loop()
@@ -135,8 +97,8 @@ void Run2017BCDEF::Loop()
         jet_p4.SetPtEtaPhiM(Jet_pt[goodJetIdx], Jet_eta[goodJetIdx], Jet_phi[goodJetIdx], Jet_mass[goodJetIdx]);
 
         TLorentzVector M_p4 = gamma_p4 + jet_p4;
-        hM->Fill(M_p4.M(), lumiScale);
-
+        hM->Fill(M_p4.M());
+        hM->Scale(lumiScale);
     }//for (Long64_t jentry=0; jentry<nentries;jentry++)
 
 
@@ -146,34 +108,23 @@ void Run2017BCDEF::Loop()
 
     TCanvas *c1 = new TCanvas("c1", "Invariant Mass #gamma + Jet", 600, 700);
 
-    TPad* pad1 = new TPad("pad1", "top", 0, 0.3, 1, 1.0);
 
-    pad1->SetBottomMargin(0.12);
-    pad1->SetLeftMargin(0.12);
-    pad1->SetRightMargin(0.05);
-    pad1->Draw();
-
-    pad1->cd();
     hM->Draw("E");
     hM->GetXaxis()->SetTitleOffset(1.4);
     hM->GetXaxis()->SetLabelOffset(0.02);
     hM->GetXaxis()->SetTitle("m_{#gamma+Jet} [GeV]");
     hM->GetXaxis()->SetTitleSize(0.12);
-    CMS_label(0.18, 0.87);
-    pad1->SetLogy();
-    TPaveText *pt_chi = new TPaveText(0.65, 0.45, 0.88, 0.73, "NDC");
-    pt_chi->SetBorderSize(0);
-    pt_chi->SetFillStyle(0);
-    pt_chi->SetTextAlign(12);
-    pt_chi->AddText(Form("#chi^{2} / ndf = %.6f", chi2/ndof));
-    pt_chi->Draw();
-
-
+    
     c1->SaveAs("Invariant_Mass_gJet.png");
 
     TFile *fOut = new TFile("Run2017BCDEF_BG_ana.root", "RECREATE");
     hM->Write();
-    lumi->Write();
+    TParameter<double> pLumi("lumi_fb", lumi);
+    pLumi.Write();
+    TParameter<double> pLumiScale("lumiScale", lumiScale);
+    pLumiScale.Write();
+    TParameter<int>    pFraction("fraction", fraction);
+    pFraction.Write();
     fOut->Close();
     delete fOut;
 
