@@ -38,8 +38,8 @@ static void CMS_label(double x, double y, double lumi_fb, double sqrts_TeV=13.0)
     latex.DrawLatex(x + 0.07, y, "Preliminary");
 
     latex.SetTextFont(42);
-    latex.DrawLatex(0.75, 0.93, Form("%.1f fb^{-1} (%g TeV)", lumi_fb, sqrts_TeV));
-    latex.SetTextSize(0.05);
+    latex.DrawLatex(0.65, 0.93, Form("%.1f fb^{-1} (%g TeV)", lumi_fb, sqrts_TeV));
+    latex.SetTextSize(0.028);
 }
 
 // Background function used in CMS dijet/gamma+jet style fits
@@ -85,7 +85,7 @@ static void Chi2OverSidebands(const TH1* h, TF1* f,
     const double xh = h->GetXaxis()->GetBinUpEdge(i);
 
     // bin-integrated prediction (consistent with "I" option)
-    const double yfit = f->Integral(xl, xh) / (xh - xl);
+    const double yfit = f->Integral(xl, xh);
 
     const double d = (y - yfit) / err;
     chi2 += d*d;
@@ -156,6 +156,9 @@ void Bkg_model_M1000() {
     double chi2 = 0.0;
     int nbin_used = 0;
     int ndof = 0;
+
+    hM->Fit(bkgFit, "IRS0", "", fit_low1, fit_high1);
+hM->Fit(bkgFit, "IRS0+", "", fit_low2, fit_high2);
 
     Chi2OverSidebands(hM, bkgFit, fit_low1, fit_high1, fit_low2, fit_high2,
             chi2, nbin_used, ndof);
@@ -252,7 +255,6 @@ void Bkg_model_M1000() {
     pt->SetFillStyle(0);
     pt->SetTextAlign(12);
     pt->AddText(Form("#chi^{2}/ndf = %.3f", chi2/ndof));
-    pt->AddText(Form("excluded: [%.0f, %.0f] GeV", signal_low, signal_high));
     pt->Draw();
 
     // bottom pad
@@ -327,4 +329,3 @@ void Bkg_model_M1000() {
     delete hResidual;
     delete bkgFit;
 }
-
