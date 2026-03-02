@@ -75,7 +75,7 @@ void fit_DSCB_RooFit()
     // ----------------------------------------------------------
     // 5. Fit the model to the data
     // ----------------------------------------------------------
-    x.setRange("fullRange", 0, 3000);
+    x.setRange("fullRange", 0, 5000);
     x.setRange("fitRange", xmin_fit, xmax_fit);
     dscb.fitTo(data, SumW2Error(kTRUE), PrintLevel(-1), Range("fitRange"));
 
@@ -109,7 +109,7 @@ void fit_DSCB_RooFit()
 
         hResidual->SetBinContent(i, residual);
         hResidual->SetBinError(i, dataErr);//??
-        hResidual->GetXaxis()->SetRangeUser(0, 3000);
+        hResidual->GetXaxis()->SetRangeUser(0, 5000);
         delete integral;
 
     }
@@ -152,7 +152,7 @@ void fit_DSCB_RooFit()
     frame->GetXaxis()->SetTitle("");
     frame->GetYaxis()->SetTitle("Events");
     frame->GetXaxis()->SetLabelSize(0);
-    frame->GetXaxis()->SetRangeUser(0,3000);
+    frame->GetXaxis()->SetRangeUser(0,5000);
     frame->Draw();
 
     double chi2 = frame->chiSquare("dscb", "data",7);
@@ -200,7 +200,7 @@ void fit_DSCB_RooFit()
 
     TLine* line = new TLine(
             0,0,
-            3000,0
+            5000,0
             );
     line->SetLineStyle(2);
     line->Draw("same");
