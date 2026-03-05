@@ -187,7 +187,7 @@ void fit_DSCB_RooFit()
     hResidual->GetYaxis()->SetTitle("Data-Fit");
     hResidual->GetYaxis()->SetTitleSize(0.12);
     hResidual->GetYaxis()->SetLabelSize(0.10);
-    hResidual->GetYaxis()->SetTitleOffset(0.2);
+    hResidual->GetYaxis()->SetTitleOffset(0.4);
     hResidual->GetXaxis()->SetTitle("m_{#gamma j} [GeV]");
     hResidual->GetXaxis()->SetTitleSize(0.12);
     hResidual->GetXaxis()->SetLabelSize(0.10);
