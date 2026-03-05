@@ -56,10 +56,10 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
 
     if (fChain == 0) return;
 
-    TH1F *hM_gen   = new TH1F("hM_gen",   "GEN M(#gamma + jet);M^{GEN}_{#gamma j} (GeV);Events",   500, 0., 3000.);
-    TH1F *hM_reco  = new TH1F("hM_reco",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
-    TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events", 100, 500, 3000);
-    TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
+    TH1F *hM_gen   = new TH1F("hM_gen",   "GEN M(#gamma + jet);M^{GEN}_{#gamma j} (GeV);Events",   500, 0., 5000.);
+    TH1F *hM_reco  = new TH1F("hM_reco",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 5000.);
+    TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events", 100, 500, 5000);
+    TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 5000.);
     
     TH1F *hPhoton_pt = new TH1F("hPhoton_pT", "Photon p_{T};p_{T}^{photon} (GeV);Events", 500, 0., 1500.);
     TH1F *hJet_pt = new TH1F("hJet_pT", "Jet p_{T};p_{T}^{jet} (GeV);Events", 500, 0., 1500.);
