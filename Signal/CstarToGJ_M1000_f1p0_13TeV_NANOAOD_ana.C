@@ -64,10 +64,10 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     TH1F *hPhoton_pt = new TH1F("hPhoton_pT", "Photon p_{T};p_{T}^{photon} (GeV);Events", 500, 0., 1500.);
     TH1F *hJet_pt = new TH1F("hJet_pT", "Jet p_{T};p_{T}^{jet} (GeV);Events", 500, 0., 1500.);
 
-    TH1D *hPU_MC = new TH1D("hPU_MC", "MC PU;True interactions;Events", 100, 0, 3000);
-    TH1D *hM_reco_selected_PU_nom = new TH1D("hM_reco_selected_PU_nom", "PU_nom", 100, 0, 3000);
-    TH1D *hM_reco_selected_PU_up = new TH1D("hM_reco_selected_PU_up", "PU_up", 100, 0, 3000);
-    TH1D *hM_reco_selected_PU_down = new TH1D("hM_reco_selected_PU_down", "PU_down", 100, 0, 3000);
+    TH1D *hPU_MC = new TH1D("hPU_MC", "MC PU;True interactions;Events", 100, 0, 100);
+    TH1D *hM_reco_selected_PU_nom = new TH1D("hM_reco_selected_PU_nom", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+TH1D *hM_reco_selected_PU_up = new TH1D("hM_reco_selected_PU_up", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+TH1D *hM_reco_selected_PU_down = new TH1D("hM_reco_selected_PU_down", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events",  500, 0., 3000);
 
     TFile *fPU = TFile::Open("pu_weights.root");
     TH1D *hPU_nom_data  = (TH1D*)fPU->Get("pu_nominal");
@@ -335,7 +335,34 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     CMS_label(0.18, 0.87);
     c9->SaveAs("Invariant_Mass_reco_selected_PU_down.png");
 
+TCanvas *c10 = new TCanvas("c10", "PU comparison", 600, 400);
 
+hM_reco_selected_PU_down->SetLineColor(kBlue);
+hM_reco_selected_PU_down->SetLineWidth(1);
+
+hM_reco_selected_PU_nom->SetLineColor(kBlack);
+hM_reco_selected_PU_nom->SetLineWidth(1);
+
+hM_reco_selected_PU_up->SetLineColor(kRed);
+hM_reco_selected_PU_up->SetLineWidth(1);
+
+
+hM_reco_selected_PU_down->Draw("HIST");
+hM_reco_selected_PU_nom->Draw("HIST SAME");
+hM_reco_selected_PU_up->Draw("HIST SAME");
+
+hM_reco_selected_PU_nom->GetXaxis()->SetTitleOffset(1.4);
+hM_reco_selected_PU_nom->GetXaxis()->SetLabelOffset(0.02);
+CMS_label(0.18, 0.87);
+
+TLegend *leg = new TLegend(0.62, 0.52, 0.88, 0.68);
+leg->AddEntry(hM_reco_selected_PU_nom, "PU nominal", "l");
+leg->AddEntry(hM_reco_selected_PU_up,  "PU up", "l");
+leg->AddEntry(hM_reco_selected_PU_down,"PU down", "l");
+leg->SetBorderSize(0);
+leg->Draw();
+
+c10->SaveAs("Invariant_Mass_reco_selected_PU_compare.png");
 
     TFile *fOut = new TFile("CstarToGJ.root", "RECREATE");
     h_M_cstar->Write();
