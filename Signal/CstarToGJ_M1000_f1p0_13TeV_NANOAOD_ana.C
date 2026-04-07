@@ -56,18 +56,18 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
     if (fChain == 0) return;
 
-    TH1F *hM_gen   = new TH1F("hM_gen",   "GEN M(#gamma + jet);M^{GEN}_{#gamma j} (GeV);Events",   500, 0., 5000.);
-    TH1F *hM_reco  = new TH1F("hM_reco",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 5000.);
-    TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events", 100, 500, 5000);
-    TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 5000.);
+    TH1F *hM_gen   = new TH1F("hM_gen",   "GEN M(#gamma + jet);M^{GEN}_{#gamma j} (GeV);Events",   500, 0., 3000.);
+    TH1F *hM_reco  = new TH1F("hM_reco",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
+    TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events", 100, 500, 3000);
+    TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
 
     TH1F *hPhoton_pt = new TH1F("hPhoton_pT", "Photon p_{T};p_{T}^{photon} (GeV);Events", 500, 0., 1500.);
     TH1F *hJet_pt = new TH1F("hJet_pT", "Jet p_{T};p_{T}^{jet} (GeV);Events", 500, 0., 1500.);
 
-    TH1D *hPU_MC = new TH1D("hPU_MC", "MC PU;True interactions;Events", 100, 0, 100);
-    TH1D *hM_reco_selected_PU_nom = new TH1D("hM_reco_selected_PU_nom", "PU_nom", 100, 0, 100);
-    TH1D *hM_reco_selected_PU_up = new TH1D("hM_reco_selected_PU_up", "PU_up", 100, 0, 100);
-    TH1D *hM_reco_selected_PU_down = new TH1D("hM_reco_selected_PU_down", "PU_down", 100, 0, 100);
+    TH1D *hPU_MC = new TH1D("hPU_MC", "MC PU;True interactions;Events", 100, 0, 3000);
+    TH1D *hM_reco_selected_PU_nom = new TH1D("hM_reco_selected_PU_nom", "PU_nom", 100, 0, 3000);
+    TH1D *hM_reco_selected_PU_up = new TH1D("hM_reco_selected_PU_up", "PU_up", 100, 0, 3000);
+    TH1D *hM_reco_selected_PU_down = new TH1D("hM_reco_selected_PU_down", "PU_down", 100, 0, 3000);
 
     TFile *fPU = TFile::Open("pu_weights.root");
     TH1D *hPU_nom_data  = (TH1D*)fPU->Get("pu_nominal");
@@ -96,6 +96,21 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     }
     std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
 
+    //Normalize
+    hPU_MC->Scale(1.0 / hPU_MC->Integral());
+    hPU_nom_data->Scale(1.0 / hPU_nom_data->Integral());
+    hPU_up_data->Scale(1.0 / hPU_up_data->Integral());
+    hPU_down_data->Scale(1.0 / hPU_down_data->Integral());
+
+    //Divide to get weight histograms
+    TH1D *hPU_nom = (TH1D*)hPU_nom_data->Clone("hPU_weight_nom");
+    TH1D *hPU_up  = (TH1D*)hPU_up_data->Clone("hPU_weight_up");
+    TH1D *hPU_down= (TH1D*)hPU_down_data->Clone("hPU_weight_down");
+
+    hPU_nom->Divide(hPU_MC);
+    hPU_up->Divide(hPU_MC);
+    hPU_down->Divide(hPU_MC);
+
 
     Long64_t nbytes = 0, nb = 0;
     for (Long64_t jentry=0; jentry<nentries;jentry++) {
@@ -104,29 +119,13 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         nb = fChain->GetEntry(jentry);   nbytes += nb;
         // if (Cut(ientry) < 0) continue;
 
-        //Normalize
-        hPU_MC->Scale(1.0 / hPU_MC->Integral());
-        hPU_nom_data->Scale(1.0 / hPU_nom_data->Integral());
-        hPU_up_data->Scale(1.0 / hPU_up_data->Integral());
-        hPU_down_data->Scale(1.0 / hPU_down_data->Integral());
-
-        //Divide to get weight
-        TH1D *hPU_nom = (TH1D*)hPU_nom_data->Clone("hPU_weight_nom");
-        TH1D *hPU_up  = (TH1D*)hPU_up_data->Clone("hPU_weight_up");
-        TH1D *hPU_down= (TH1D*)hPU_down_data->Clone("hPU_weight_down");
-
-        hPU_nom->Divide(hPU_MC);
-        hPU_up->Divide(hPU_MC);
-        hPU_down->Divide(hPU_MC);
-
         int bin = hPU_nom->FindBin(Pileup_nTrueInt);
-
-        if (bin < 1) bin = 1;
-        if (bin > hPU_nom->GetNbinsX()) bin = hPU_nom->GetNbinsX();
+        bin = std::max(1, std::min(bin, hPU_nom->GetNbinsX())); // cleaner clamp
 
         double w_PU_nom  = hPU_nom->GetBinContent(bin);
         double w_PU_up   = hPU_up->GetBinContent(bin);
         double w_PU_down = hPU_down->GetBinContent(bin);
+
 
         double weight = lumi_pb * xsec * genWeight / sum_genWeight;
 
@@ -315,6 +314,26 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     CMS_label(0.18, 0.87);
     c6->SaveAs("Invariant_Mass_reco_selected.png");
 
+    TCanvas *c7 = new TCanvas("c7", "Invariant Mass Reco PU Nom", 600, 400);
+    hM_reco_selected_PU_nom->Draw("HIST");
+    hM_reco_selected_PU_nom->GetXaxis()->SetTitleOffset(1.4);
+    hM_reco_selected_PU_nom->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c7->SaveAs("Invariant_Mass_reco_selected_PU_nom.png");
+
+    TCanvas *c8 = new TCanvas("c8", "Invariant Mass Reco PU Up", 600, 400);
+    hM_reco_selected_PU_up->Draw("HIST");
+    hM_reco_selected_PU_up->GetXaxis()->SetTitleOffset(1.4);
+    hM_reco_selected_PU_up->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c8->SaveAs("Invariant_Mass_reco_selected_PU_up.png");
+
+    TCanvas *c9 = new TCanvas("c9", "Invariant Mass Reco PU Down", 600, 400);
+    hM_reco_selected_PU_down->Draw("HIST");
+    hM_reco_selected_PU_down->GetXaxis()->SetTitleOffset(1.4);
+    hM_reco_selected_PU_down->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c9->SaveAs("Invariant_Mass_reco_selected_PU_down.png");
 
 
 
@@ -322,6 +341,9 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     h_M_cstar->Write();
     hM_gen->Write();
     hM_reco_selected ->Write();
+    hM_reco_selected_PU_nom->Write();   
+    hM_reco_selected_PU_up->Write();
+    hM_reco_selected_PU_down->Write();
     hPhoton_pt->Write();
     hJet_pt->Write();
     fOut->Close();
