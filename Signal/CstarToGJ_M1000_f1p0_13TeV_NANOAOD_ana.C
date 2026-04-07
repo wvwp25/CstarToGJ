@@ -64,11 +64,25 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     TH1F *hPhoton_pt = new TH1F("hPhoton_pT", "Photon p_{T};p_{T}^{photon} (GeV);Events", 500, 0., 1500.);
     TH1F *hJet_pt = new TH1F("hJet_pT", "Jet p_{T};p_{T}^{jet} (GeV);Events", 500, 0., 1500.);
 
+    TH1D *hPU_MC = new TH1D("hPU_MC", "MC PU;True interactions;Events", 100, 0, 100);
+    TH1D *hM_reco_selected_PU_nom = new TH1D("hM_reco_selected_PU_nom", "PU_nom", 100, 0, 100);
+    TH1D *hM_reco_selected_PU_up = new TH1D("hM_reco_selected_PU_up", "PU_up", 100, 0, 100);
+    TH1D *hM_reco_selected_PU_down = new TH1D("hM_reco_selected_PU_down", "PU_down", 100, 0, 100);
+
+    TFile *fPU = TFile::Open("pu_weights.root");
+    TH1D *hPU_nom_data  = (TH1D*)fPU->Get("pu_nominal");
+    TH1D *hPU_up_data   = (TH1D*)fPU->Get("pu_up");
+    TH1D *hPU_down_data = (TH1D*)fPU->Get("pu_down");
+
+
+
     hM_gen ->Sumw2();
     hM_reco->Sumw2();
     hPhoton_pt->Sumw2();
     hJet_pt->Sumw2();
     hM_reco_selected->Sumw2();
+
+    hPU_MC->Sumw2();
 
     double sum_genWeight = 0.0;
 
@@ -78,6 +92,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         LoadTree(jentry);
         fChain->GetEntry(jentry);
         sum_genWeight += genWeight;
+        hPU_MC->Fill(Pileup_nTrueInt);
     }
     std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
 
@@ -89,7 +104,35 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         nb = fChain->GetEntry(jentry);   nbytes += nb;
         // if (Cut(ientry) < 0) continue;
 
+        //Normalize
+        hPU_MC->Scale(1.0 / hPU_MC->Integral());
+        hPU_nom_data->Scale(1.0 / hPU_nom_data->Integral());
+        hPU_up_data->Scale(1.0 / hPU_up_data->Integral());
+        hPU_down_data->Scale(1.0 / hPU_down_data->Integral());
+
+        //Divide to get weight
+        TH1D *hPU_nom = (TH1D*)hPU_nom_data->Clone("hPU_weight_nom");
+        TH1D *hPU_up  = (TH1D*)hPU_up_data->Clone("hPU_weight_up");
+        TH1D *hPU_down= (TH1D*)hPU_down_data->Clone("hPU_weight_down");
+
+        hPU_nom->Divide(hPU_MC);
+        hPU_up->Divide(hPU_MC);
+        hPU_down->Divide(hPU_MC);
+
+        int bin = hPU_nom->FindBin(Pileup_nTrueInt);
+
+        if (bin < 1) bin = 1;
+        if (bin > hPU_nom->GetNbinsX()) bin = hPU_nom->GetNbinsX();
+
+        double w_PU_nom  = hPU_nom->GetBinContent(bin);
+        double w_PU_up   = hPU_up->GetBinContent(bin);
+        double w_PU_down = hPU_down->GetBinContent(bin);
+
         double weight = lumi_pb * xsec * genWeight / sum_genWeight;
+
+        double weight_nom  = weight * w_PU_nom;
+        double weight_up   = weight * w_PU_up;
+        double weight_down = weight * w_PU_down;
 
         if (nPhoton < 1 || nJet < 1 || nGenPart <= 0 || nGenJet <= 0)   continue;
 
@@ -217,6 +260,10 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
         TLorentzVector reco_m_p4 = reco_g_p4 + reco_j_p4;
         hM_reco_selected -> Fill(reco_m_p4.M(), weight);
+
+        hM_reco_selected_PU_nom -> Fill(reco_m_p4.M(), weight_nom);
+        hM_reco_selected_PU_up -> Fill(reco_m_p4.M(), weight_up);
+        hM_reco_selected_PU_down -> Fill(reco_m_p4.M(), weight_down);
 
         hPhoton_pt->Fill(Photon_pt[goodPhotonIdx], weight);
         hJet_pt->Fill(Jet_pt[goodJetIdx], weight);
