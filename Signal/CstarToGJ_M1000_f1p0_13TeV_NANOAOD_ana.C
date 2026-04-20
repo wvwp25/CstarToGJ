@@ -10,6 +10,11 @@
 #include "TLatex.h"
 #include "TStyle.h"
 #include "TPaveText.h"
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <algorithm>
+#include <random>
 
 void SetCMSStyle(){
     //gStyle->SetOptStat(0);   // no stat box
@@ -66,10 +71,10 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
     TH1D *hPU_MC = new TH1D("hPU_MC", "MC PU;True interactions;Events", 100, 0, 100);
     TH1D *hM_reco_selected_PU_nom = new TH1D("hM_reco_selected_PU_nom", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
-TH1D *hM_reco_selected_PU_up = new TH1D("hM_reco_selected_PU_up", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
-TH1D *hM_reco_selected_PU_down = new TH1D("hM_reco_selected_PU_down", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events",  500, 0., 3000);
+    TH1D *hM_reco_selected_PU_up = new TH1D("hM_reco_selected_PU_up", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+    TH1D *hM_reco_selected_PU_down = new TH1D("hM_reco_selected_PU_down", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events",  500, 0., 3000);
 
-    TFile *fPU = TFile::Open("pu_weights.root");
+    TFile *fPU = TFile::Open("DataPileupHistograms.root");
     TH1D *hPU_nom_data  = (TH1D*)fPU->Get("pu_nominal");
     TH1D *hPU_up_data   = (TH1D*)fPU->Get("pu_up");
     TH1D *hPU_down_data = (TH1D*)fPU->Get("pu_down");
@@ -92,7 +97,7 @@ TH1D *hM_reco_selected_PU_down = new TH1D("hM_reco_selected_PU_down", "RECO M(#g
         LoadTree(jentry);
         fChain->GetEntry(jentry);
         sum_genWeight += genWeight;
-        hPU_MC->Fill(Pileup_nTrueInt);
+        hPU_MC->Fill(Pileup_nTrueInt, genWeight);
     }
     std::cout << "Total genWeight sum = " << sum_genWeight << std::endl;
 
@@ -133,6 +138,14 @@ TH1D *hM_reco_selected_PU_down = new TH1D("hM_reco_selected_PU_down", "RECO M(#g
         double weight_up   = weight * w_PU_up;
         double weight_down = weight * w_PU_down;
 
+        if (jentry < 20) {
+            std::cout << "Event " << jentry
+                << " | PU = " << Pileup_nTrueInt
+                << " | w_nom = " << weight_nom
+                << " | w_up = " << weight_up
+                << " | w_down = " << weight_down
+                << std::endl;
+        }
         if (nPhoton < 1 || nJet < 1 || nGenPart <= 0 || nGenJet <= 0)   continue;
 
         int cstarIdx = -1;
@@ -335,34 +348,136 @@ TH1D *hM_reco_selected_PU_down = new TH1D("hM_reco_selected_PU_down", "RECO M(#g
     CMS_label(0.18, 0.87);
     c9->SaveAs("Invariant_Mass_reco_selected_PU_down.png");
 
-TCanvas *c10 = new TCanvas("c10", "PU comparison", 600, 400);
+    TCanvas *c10 = new TCanvas("c10", "PU comparison", 600, 400);
 
-hM_reco_selected_PU_down->SetLineColor(kBlue);
-hM_reco_selected_PU_down->SetLineWidth(1);
+    hM_reco_selected_PU_down->SetLineColor(kBlue);
+    hM_reco_selected_PU_down->SetLineWidth(1);
 
-hM_reco_selected_PU_nom->SetLineColor(kBlack);
-hM_reco_selected_PU_nom->SetLineWidth(1);
+    hM_reco_selected_PU_nom->SetLineColor(kBlack);
+    hM_reco_selected_PU_nom->SetLineWidth(1);
 
-hM_reco_selected_PU_up->SetLineColor(kRed);
-hM_reco_selected_PU_up->SetLineWidth(1);
+    hM_reco_selected_PU_up->SetLineColor(kRed);
+    hM_reco_selected_PU_up->SetLineWidth(1);
 
 
-hM_reco_selected_PU_down->Draw("HIST");
-hM_reco_selected_PU_nom->Draw("HIST SAME");
-hM_reco_selected_PU_up->Draw("HIST SAME");
+    hM_reco_selected_PU_down->Draw("HIST");
+    hM_reco_selected_PU_nom->Draw("HIST SAME");
+    hM_reco_selected_PU_up->Draw("HIST SAME");
 
-hM_reco_selected_PU_nom->GetXaxis()->SetTitleOffset(1.4);
-hM_reco_selected_PU_nom->GetXaxis()->SetLabelOffset(0.02);
-CMS_label(0.18, 0.87);
+    hM_reco_selected_PU_nom->GetXaxis()->SetTitleOffset(1.4);
+    hM_reco_selected_PU_nom->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
 
-TLegend *leg = new TLegend(0.62, 0.52, 0.88, 0.68);
-leg->AddEntry(hM_reco_selected_PU_nom, "PU nominal", "l");
-leg->AddEntry(hM_reco_selected_PU_up,  "PU up", "l");
-leg->AddEntry(hM_reco_selected_PU_down,"PU down", "l");
-leg->SetBorderSize(0);
-leg->Draw();
+    TLegend *leg = new TLegend(0.62, 0.52, 0.88, 0.68);
+    leg->AddEntry(hM_reco_selected_PU_nom, "PU nominal", "l");
+    leg->AddEntry(hM_reco_selected_PU_up,  "PU up", "l");
+    leg->AddEntry(hM_reco_selected_PU_down,"PU down", "l");
+    leg->SetBorderSize(0);
+    leg->Draw();
 
-c10->SaveAs("Invariant_Mass_reco_selected_PU_compare.png");
+    c10->SaveAs("Invariant_Mass_reco_selected_PU_compare.png");
+
+    //===============
+    //PU comparison
+    //===============
+
+    TCanvas *cPUcomp = new TCanvas("cPUcomp", "PU comparison", 700, 700);
+
+    // Pads
+    TPad *pad1 = new TPad("pad1", "top pad", 0.0, 0.30, 1.0, 1.0);
+    TPad *pad2 = new TPad("pad2", "bottom pad", 0.0, 0.00, 1.0, 0.30);
+
+    pad1->SetBottomMargin(0.02);
+    pad1->SetLeftMargin(0.12);
+    pad1->SetRightMargin(0.05);
+
+    pad2->SetTopMargin(0.03);
+    pad2->SetBottomMargin(0.30);
+    pad2->SetLeftMargin(0.12);
+    pad2->SetRightMargin(0.05);
+
+    pad1->Draw();
+    pad2->Draw();
+
+
+    // Top pad
+    pad1->cd();
+    gStyle->SetOptStat(0);
+    TH1D *hData_plot = (TH1D*)hPU_nom_data->Clone("hData_plot");
+    TH1D *hMC_plot   = (TH1D*)hPU_MC->Clone("hMC_plot");
+
+    hData_plot->SetTitle("");
+    hData_plot->SetLineColor(kBlack);
+    hData_plot->SetMarkerColor(kBlack);
+    hData_plot->SetMarkerStyle(20);
+    hData_plot->SetMarkerSize(0.9);
+    hData_plot->SetLineWidth(2);
+    hData_plot->SetMinimum(0.0);
+
+    hMC_plot->SetLineColor(kCyan+2);
+    hMC_plot->SetMarkerColor(kCyan+2);
+    hMC_plot->SetFillColor(kCyan+2);
+    hMC_plot->SetFillStyle(3001);
+    hMC_plot->SetLineWidth(2);
+
+    hData_plot->GetYaxis()->SetTitle("entries / 1.0");
+    hData_plot->GetYaxis()->SetTitleSize(0.05);
+    hData_plot->GetYaxis()->SetLabelSize(0.035);
+    hData_plot->GetYaxis()->SetTitleOffset(1.1);
+
+    hData_plot->GetXaxis()->SetLabelSize(0); // hide x labels on top pad
+
+    double ymax = std::max(hData_plot->GetMaximum(), hMC_plot->GetMaximum());
+    hData_plot->SetMaximum(1.15 * ymax);
+
+    hData_plot->Draw("E1");
+    hMC_plot->Draw("HIST SAME");
+    hData_plot->Draw("E1 SAME");
+
+    leg->AddEntry(hData_plot, "data pileup", "lep");
+    leg->AddEntry(hMC_plot, "MC Pileup_nTrueInt", "f");
+    leg->SetBorderSize(1);
+    leg->SetFillStyle(0);
+    leg->Draw();
+
+    CMS_label(0.15, 0.87);
+
+
+    // Bottom pad
+    pad2->cd();
+    gStyle->SetOptStat(0);
+    TH1D *hRatio = (TH1D*)hData_plot->Clone("hRatio");
+    hRatio->Divide(hMC_plot);
+    hRatio->SetTitle("");
+    hRatio->SetLineColor(kBlack);
+    hRatio->SetMarkerColor(kBlack);
+    hRatio->SetMarkerStyle(20);
+    hRatio->SetMarkerSize(0.8);
+
+    hRatio->GetYaxis()->SetTitle("Data / MC");
+    hRatio->GetXaxis()->SetTitle("pileup");
+
+    hRatio->GetYaxis()->SetNdivisions(505);
+    hRatio->GetYaxis()->SetTitleSize(0.10);
+    hRatio->GetYaxis()->SetLabelSize(0.08);
+    hRatio->GetYaxis()->SetTitleOffset(0.5);
+
+    hRatio->GetXaxis()->SetTitleSize(0.12);
+    hRatio->GetXaxis()->SetLabelSize(0.10);
+    hRatio->GetXaxis()->SetTitleOffset(1.0);
+
+    hRatio->SetMinimum(0.0);
+    hRatio->SetMaximum(2.0);
+
+    hRatio->Draw("E1");
+
+    TLine *line1 = new TLine(hRatio->GetXaxis()->GetXmin(), 1.0,
+            hRatio->GetXaxis()->GetXmax(), 1.0);
+    line1->SetLineStyle(2);
+    line1->Draw();
+
+    cPUcomp->SaveAs("Pileup_Data_vs_MC_ratio.png");
+
 
     TFile *fOut = new TFile("CstarToGJ.root", "RECREATE");
     h_M_cstar->Write();

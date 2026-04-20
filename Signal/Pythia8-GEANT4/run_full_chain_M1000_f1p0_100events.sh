@@ -9,13 +9,13 @@ CLUSTER_ID=$1
 PROC_ID=$2
 
 # Events per job
-EVENTS_PER_JOB=10
+EVENTS_PER_JOB=100
 
 # Unique random seed per job (to ensure different events)
 SEED=$(( PROC_ID*1000+ $(date +%s)))
 
 # Pileup
-PILEUP_LIST="/afs/cern.ch/user/h/hsiaoche/CMSSW_10_6_30/src/RunIISummer20ULPrePremix-UL17_106X_mc2017_realistic_v6-v3_urls_shuf.txt"
+PILEUP_LIST="/afs/cern.ch/user/h/hsiaoche/CMSSW_10_6_30/src/minbias_cnaf_urls.txt"
 
 # Output naming per job
 #TAG="job${PROC_ID}"
@@ -105,14 +105,12 @@ cmsDriver.py step1 \
     --fileout ${FULL_DIGI2RAWHLT_PATH} \
     --pileup_input "filelist:${PILEUP_LIST}" \
     --mc \
-    --eventcontent PREMIXRAW \
+    --eventcontent FEVTDEBUGHLT \
     --pileup 2017_25ns_UltraLegacy_PoissonOOTPU \
     --datatier GEN-SIM-DIGI-RAW \
     --conditions 106X_mc2017_realistic_v6 \
     --beamspot Realistic25ns13TeVEarly2017Collision \
-    --step DIGI,DATAMIX,L1,DIGI2RAW,HLT:@relval2017 \
-    --procModifiers premix_stage2 \
-    --datamix PreMix \
+    --step DIGI,L1,DIGI2RAW,HLT:@relval2017 \
     --nThreads 1 \
     --geometry DB:Extended \
     --era Run2_2017 \
@@ -211,6 +209,3 @@ echo "--- Cleaning up MiniAOD file ---"
 rm -f ${EOS_OUTPUT_DIR}/${MINIAOD_FILE}
 
 echo "--- Congratulations! NanoAOD production finished successfully! Final file: ${FULL_NANOAOD_PATH} ---"
-
-
-
