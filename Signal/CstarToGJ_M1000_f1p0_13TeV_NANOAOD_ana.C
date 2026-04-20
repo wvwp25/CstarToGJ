@@ -359,10 +359,10 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     hM_reco_selected_PU_up->SetLineColor(kRed);
     hM_reco_selected_PU_up->SetLineWidth(1);
 
-
     hM_reco_selected_PU_down->Draw("HIST");
     hM_reco_selected_PU_nom->Draw("HIST SAME");
     hM_reco_selected_PU_up->Draw("HIST SAME");
+
 
     hM_reco_selected_PU_nom->GetXaxis()->SetTitleOffset(1.4);
     hM_reco_selected_PU_nom->GetXaxis()->SetLabelOffset(0.02);
@@ -434,11 +434,12 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     hMC_plot->Draw("HIST SAME");
     hData_plot->Draw("E1 SAME");
 
-    leg->AddEntry(hData_plot, "data pileup", "lep");
-    leg->AddEntry(hMC_plot, "MC Pileup_nTrueInt", "f");
-    leg->SetBorderSize(1);
-    leg->SetFillStyle(0);
-    leg->Draw();
+    TLegend *legPU = new TLegend(0.62, 0.58, 0.88, 0.82);
+    legPU->AddEntry(hData_plot, "data pileup", "lep");
+    legPU->AddEntry(hMC_plot, "MC Pileup_nTrueInt", "f");
+    legPU->SetBorderSize(1);
+    legPU->SetFillStyle(0);
+    legPU->Draw();
 
     CMS_label(0.15, 0.87);
 
@@ -483,9 +484,9 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     h_M_cstar->Write();
     hM_gen->Write();
     hM_reco_selected ->Write();
-    hM_reco_selected_PU_nom->Write();   
-    hM_reco_selected_PU_up->Write();
-    hM_reco_selected_PU_down->Write();
+    hM_reco_selected_PU_nom->Write("sig_puNominal");   
+    hM_reco_selected_PU_up->Write("sig_puUp");
+    hM_reco_selected_PU_down->Write("sig_puDown");
     hPhoton_pt->Write();
     hJet_pt->Write();
     fOut->Close();
