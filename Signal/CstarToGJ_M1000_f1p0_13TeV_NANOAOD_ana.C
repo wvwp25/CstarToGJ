@@ -187,6 +187,12 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     JecApplication::SystematicOptions systNom;
     systNom.jerVar = "nom";
 
+    JecApplication::SystematicOptions systJERUp;
+systJERUp.jerVar = "up";
+
+JecApplication::SystematicOptions systJERDown;
+systJERDown.jerVar = "down";
+
     Long64_t nbytes = 0, nb = 0;
     for (Long64_t jentry=0; jentry<nentries;jentry++) {
         Long64_t ientry = LoadTree(jentry);
@@ -308,9 +314,10 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         // central, JER up, JER down
         // -----------------------------
 
-        std::vector<UInt_t> goodJets;
-        std::vector<TLorentzVector> goodJetP4s;
-
+        std::vector<int> goodJets;
+std::vector<TLorentzVector> goodJetP4s_nom;
+std::vector<TLorentzVector> goodJetP4s_JERUp;
+std::vector<TLorentzVector> goodJetP4s_JERDown;
 
         for (UInt_t i= 0; i < nJet; ++i){
 
@@ -361,18 +368,32 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
             //   |ptReco - ptGen| < 3 * resolution * ptReco
             // If failed, it automatically uses stochastic smearing.
 
-            double jer = jec.jerFactor(
-                    {ptAfterJes, Jet_eta[i], Jet_phi[i],
-                    Jet_area[i], fixedGridRhoFastjetAll, 0.0},
-                    jrin,
-                    systNom
-                    );
+            JecApplication::JesInputs jinAfterJes;
+jinAfterJes.pt        = ptAfterJes;
+jinAfterJes.eta       = Jet_eta[i];
+jinAfterJes.phi       = Jet_phi[i];
+jinAfterJes.area      = Jet_area[i];
+jinAfterJes.rho       = fixedGridRhoFastjetAll;
+jinAfterJes.rawFactor = 0.0;
+
+double jerNom = jec.jerFactor(jinAfterJes, jrin, systNom);
+double jerUp  = jec.jerFactor(jinAfterJes, jrin, systJERUp);
+double jerDown= jec.jerFactor(jinAfterJes, jrin, systJERDown);
+
+double ptNom   = ptAfterJes * jerNom;
+double massNom = massAfterJes * jerNom;
+
+double ptJERUp   = ptAfterJes * jerUp;
+double massJERUp = massAfterJes * jerUp;
+
+double ptJERDown   = ptAfterJes * jerDown;
+double massJERDown = massAfterJes * jerDown;
 
             // final corrected jet
             double ptCorr   = ptAfterJes * jer;
             double massCorr = massAfterJes * jer;
 
-            if (ptCorr < 170) continue;
+            if (ptNom < 170) continue;
             if (fabs(Jet_eta[i]) >= 2.4) continue;
             if (Jet_jetId[i] < 6) continue;
             if (Jet_btagDeepFlavCvB[i] < 0.340) continue;
@@ -381,14 +402,20 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
             TLorentzVector j_raw;
             j_raw.SetPtEtaPhiM(Jet_pt[i], Jet_eta[i], Jet_phi[i], Jet_mass[i]);
 
-            TLorentzVector j_corr;
-            j_corr.SetPtEtaPhiM(ptCorr, Jet_eta[i], Jet_phi[i], massCorr);
+TLorentzVector j_nom, j_JERUp, j_JERDown;
 
+j_nom.SetPtEtaPhiM(ptNom, Jet_eta[i], Jet_phi[i], massNom);
+j_JERUp.SetPtEtaPhiM(ptJERUp, Jet_eta[i], Jet_phi[i], massJERUp);
+j_JERDown.SetPtEtaPhiM(ptJERDown, Jet_eta[i], Jet_phi[i], massJERDown);
 
             if (g_p4.DeltaR(j_raw) <= 0.4) continue;
-            if (g_p4.DeltaR(j_corr) <= 0.4) continue;
+if (g_p4.DeltaR(j_nom) <= 0.4) continue;
+
             goodJets.push_back(i);
-            goodJetP4s.push_back(j_corr);
+goodJetP4s_nom.push_back(j_nom);
+goodJetP4s_JERUp.push_back(j_JERUp);
+goodJetP4s_JERDown.push_back(j_JERDown);
+
         }
         if (goodJets.size() == 0) continue;
 
@@ -425,7 +452,34 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         hPhoton_pt->Fill(Photon_pt[goodPhotonIdx], weight_raw);
         hJet_pt->Fill(Jet_pt[goodJetIdx], weight_raw);
 
+if (goodJetP4s_nom.size() == 0) continue;
 
+int goodJetVecIdx = GetLeadingJetIndex(goodJetP4s_nom);
+if (goodJetVecIdx < 0) continue;
+
+TLorentzVector reco_g_p4;
+reco_g_p4.SetPtEtaPhiM(
+    Photon_pt[goodPhotonIdx],
+    Photon_eta[goodPhotonIdx],
+    Photon_phi[goodPhotonIdx],
+    Photon_mass[goodPhotonIdx]
+);
+
+TLorentzVector reco_j_nom     = goodJetP4s_nom[goodJetVecIdx];
+TLorentzVector reco_j_JERUp   = goodJetP4s_JERUp[goodJetVecIdx];
+TLorentzVector reco_j_JERDown = goodJetP4s_JERDown[goodJetVecIdx];
+
+double m_nom     = (reco_g_p4 + reco_j_nom).M();
+double m_JERUp   = (reco_g_p4 + reco_j_JERUp).M();
+double m_JERDown = (reco_g_p4 + reco_j_JERDown).M();
+
+h_sig->Fill(m_nom, weight_central);
+
+h_sig_PUUp->Fill(m_nom, weight_PUUp);
+h_sig_PUDown->Fill(m_nom, weight_PUDown);
+
+h_sig_JERUp->Fill(m_JERUp, weight_central);
+h_sig_JERDown->Fill(m_JERDown, weight_central);
 
 
     }//jentry
@@ -634,6 +688,11 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     hM_reco_selected_PU_down->Write("sig_puDown");
     hPhoton_pt->Write();
     hJet_pt->Write();
+    h_sig->Write("sig");
+h_sig_PUUp->Write("sig_PUUp");
+h_sig_PUDown->Write("sig_PUDown");
+    h_sig_JERUp->Write("sig_JERUp");
+h_sig_JERDown->Write("sig_JERDown");
     fOut->Close();
     delete fOut;
 
