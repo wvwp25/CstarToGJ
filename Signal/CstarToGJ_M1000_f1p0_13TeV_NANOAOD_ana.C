@@ -99,9 +99,6 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     TH1F *hM_reco  = new TH1F("hM_reco",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
     TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events", 100, 500, 3000);
     TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
-    TH1F *h_sig = new TH1F("h_sig", "PU_nom M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
-    TH1F *h_sig_PUUp = new TH1F("h_sig_PUUp", "PU_nom M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
-    TH1F *h_sig_PUDown = new TH1F("h_sig_PUDown", "PU_nom M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
 
     TH1F *hPhoton_pt = new TH1F("hPhoton_pT", "Photon p_{T};p_{T}^{photon} (GeV);Events", 500, 0., 1500.);
     TH1F *hJet_pt = new TH1F("hJet_pT", "Jet p_{T};p_{T}^{jet} (GeV);Events", 500, 0., 1500.);
@@ -415,35 +412,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         }
         if (goodJets.size() == 0) continue;
 
-
-
-        // Select Leading Jet
-        int goodJetIdx = -1;
-        int goodJetVecIdx = -1;
-        float leadingJetPt = -1.0;
-
-        for (UInt_t k = 0; k < (UInt_t)goodJets.size(); ++k) {
-            if (goodJetP4s[k].Pt() > leadingJetPt) {
-                goodJetIdx = goodJets[k];
-                goodJetVecIdx = k;
-                leadingJetPt = goodJetP4s[k].Pt();
-            }
-        }
-
-        if (goodJetIdx < 0) continue;
-
-        // *********** RECO Invatiant Mass ( selected RECO leadnig photon + RECO leading jet) ***********
-
-        TLorentzVector reco_g_p4;
-        reco_g_p4.SetPtEtaPhiM(Photon_pt[goodPhotonIdx], Photon_eta[goodPhotonIdx], Photon_phi[goodPhotonIdx], Photon_mass[goodPhotonIdx]);
-        TLorentzVector reco_j_p4 = goodJetP4s[goodJetVecIdx];
-
-        TLorentzVector reco_m_p4 = reco_g_p4 + reco_j_p4;
-        hM_reco_selected -> Fill(reco_m_p4.M(), weight_raw);
-
-        h_sig -> Fill(reco_m_p4.M(), weight_central);
-        h_sig_PUUp -> Fill(reco_m_p4.M(), weight_PUUp);
-        h_sig_PUDown -> Fill(reco_m_p4.M(), weight_PUDown);
+        
 
         hPhoton_pt->Fill(Photon_pt[goodPhotonIdx], weight_raw);
         hJet_pt->Fill(Jet_pt[goodJetIdx], weight_raw);
