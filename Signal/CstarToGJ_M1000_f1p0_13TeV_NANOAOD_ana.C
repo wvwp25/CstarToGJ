@@ -69,7 +69,7 @@ double xsec = 1.307;
 // --------------------------------------------------
 int GetLeadingJetIndex(const std::vector<TLorentzVector> &jets)
 {
-    UInt_t bestIdx = -1;
+    int bestIdx = -1;
     double bestPt = -1.0;
 
     for (UInt_t i = 0; i < (UInt_t)jets.size(); ++i) {
@@ -215,9 +215,9 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
         // ***** Gen *****
 
-        UInt_t cstarIdx = -1;
-        UInt_t genPhotonIdx = -1;
-        UInt_t genCharmIdx = -1;
+        int cstarIdx = -1;
+        int genPhotonIdx = -1;
+        int genCharmIdx = -1;
 
         std::vector<UInt_t> cstar; //contains indices of all generated c* particles
         for (UInt_t i= 0; i< nGenPart; ++i){
@@ -229,8 +229,8 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         if (cstar.size() == 0) continue;
 
         for (UInt_t idx : cstar){
-            UInt_t photon = -1;
-            UInt_t charm = -1;
+            int photon = -1;
+            int charm = -1;
 
             for (UInt_t i= 0; i< nGenPart; ++i){
                 if (GenPart_genPartIdxMother[i] != idx) continue;
@@ -255,7 +255,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         //Match Gen charm GenJet
         TLorentzVector c_p4, GenJet_p4;
 
-        UInt_t genJetIdx = -1;
+        int genJetIdx = -1;
         float best_deltaR_cJet = 999;
         for (UInt_t j= 0; j< nGenJet; ++j){
 
@@ -283,7 +283,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         // *******************************  RECO Photon + Jet selection *******************************
 
         // Photon selection
-        UInt_t goodPhotonIdx = -1;
+        int goodPhotonIdx = -1;
         float leadingPhotonPt = -1.0;
 
         for (UInt_t i= 0; i< nPhoton; ++i){
@@ -339,7 +339,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
             jrin.maxDr  = 0.2;
 
             double bestDr = 999.0;
-            UInt_t matchedGenJetIdx = -1;
+            int matchedGenJetIdx = -1;
 
             for (UInt_t ig = 0; ig < nGenJet; ++ig) {
                 double dR = deltaR(Jet_eta[i], Jet_phi[i],
@@ -395,8 +395,8 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
 
         // Select Leading Jet
-        UInt_t goodJetIdx = -1;
-        UInt_t goodJetVecIdx = -1;
+        int goodJetIdx = -1;
+        int goodJetVecIdx = -1;
         float leadingJetPt = -1.0;
 
         for (UInt_t k = 0; k < (UInt_t)goodJets.size(); ++k) {
