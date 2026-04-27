@@ -99,9 +99,9 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     TH1F *hM_reco  = new TH1F("hM_reco",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
     TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events", 100, 500, 3000);
     TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
-    TH1F *hM_reco_selected_PU_nom = new TH1F("hM_reco_selected_PU_nom", "PU_nom M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
-    TH1F *hM_reco_selected_PU_up = new TH1F("hM_reco_selected_PU_up", "PU_nom M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
-    TH1F *hM_reco_selected_PU_down = new TH1F("hM_reco_selected_PU_down", "PU_nom M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
+    TH1F *h_sig = new TH1F("h_sig", "PU_nom M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
+    TH1F *h_sig_PUUp = new TH1F("h_sig_PUUp", "PU_nom M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
+    TH1F *h_sig_PUDown = new TH1F("h_sig_PUDown", "PU_nom M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
 
     TH1F *hPhoton_pt = new TH1F("hPhoton_pT", "Photon p_{T};p_{T}^{photon} (GeV);Events", 500, 0., 1500.);
     TH1F *hJet_pt = new TH1F("hJet_pT", "Jet p_{T};p_{T}^{jet} (GeV);Events", 500, 0., 1500.);
@@ -188,10 +188,10 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     systNom.jerVar = "nom";
 
     JecApplication::SystematicOptions systJERUp;
-systJERUp.jerVar = "up";
+    systJERUp.jerVar = "up";
 
-JecApplication::SystematicOptions systJERDown;
-systJERDown.jerVar = "down";
+    JecApplication::SystematicOptions systJERDown;
+    systJERDown.jerVar = "down";
 
     Long64_t nbytes = 0, nb = 0;
     for (Long64_t jentry=0; jentry<nentries;jentry++) {
@@ -315,9 +315,9 @@ systJERDown.jerVar = "down";
         // -----------------------------
 
         std::vector<int> goodJets;
-std::vector<TLorentzVector> goodJetP4s_nom;
-std::vector<TLorentzVector> goodJetP4s_JERUp;
-std::vector<TLorentzVector> goodJetP4s_JERDown;
+        std::vector<TLorentzVector> goodJetP4s_nom;
+        std::vector<TLorentzVector> goodJetP4s_JERUp;
+        std::vector<TLorentzVector> goodJetP4s_JERDown;
 
         for (UInt_t i= 0; i < nJet; ++i){
 
@@ -369,29 +369,25 @@ std::vector<TLorentzVector> goodJetP4s_JERDown;
             // If failed, it automatically uses stochastic smearing.
 
             JecApplication::JesInputs jinAfterJes;
-jinAfterJes.pt        = ptAfterJes;
-jinAfterJes.eta       = Jet_eta[i];
-jinAfterJes.phi       = Jet_phi[i];
-jinAfterJes.area      = Jet_area[i];
-jinAfterJes.rho       = fixedGridRhoFastjetAll;
-jinAfterJes.rawFactor = 0.0;
+            jinAfterJes.pt        = ptAfterJes;
+            jinAfterJes.eta       = Jet_eta[i];
+            jinAfterJes.phi       = Jet_phi[i];
+            jinAfterJes.area      = Jet_area[i];
+            jinAfterJes.rho       = fixedGridRhoFastjetAll;
+            jinAfterJes.rawFactor = 0.0;
 
-double jerNom = jec.jerFactor(jinAfterJes, jrin, systNom);
-double jerUp  = jec.jerFactor(jinAfterJes, jrin, systJERUp);
-double jerDown= jec.jerFactor(jinAfterJes, jrin, systJERDown);
+            double jerNom = jec.jerFactor(jinAfterJes, jrin, systNom);
+            double jerUp  = jec.jerFactor(jinAfterJes, jrin, systJERUp);
+            double jerDown= jec.jerFactor(jinAfterJes, jrin, systJERDown);
 
-double ptNom   = ptAfterJes * jerNom;
-double massNom = massAfterJes * jerNom;
+            double ptNom   = ptAfterJes * jerNom;
+            double massNom = massAfterJes * jerNom;
 
-double ptJERUp   = ptAfterJes * jerUp;
-double massJERUp = massAfterJes * jerUp;
+            double ptJERUp   = ptAfterJes * jerUp;
+            double massJERUp = massAfterJes * jerUp;
 
-double ptJERDown   = ptAfterJes * jerDown;
-double massJERDown = massAfterJes * jerDown;
-
-            // final corrected jet
-            double ptCorr   = ptAfterJes * jer;
-            double massCorr = massAfterJes * jer;
+            double ptJERDown   = ptAfterJes * jerDown;
+            double massJERDown = massAfterJes * jerDown;
 
             if (ptNom < 170) continue;
             if (fabs(Jet_eta[i]) >= 2.4) continue;
@@ -402,19 +398,19 @@ double massJERDown = massAfterJes * jerDown;
             TLorentzVector j_raw;
             j_raw.SetPtEtaPhiM(Jet_pt[i], Jet_eta[i], Jet_phi[i], Jet_mass[i]);
 
-TLorentzVector j_nom, j_JERUp, j_JERDown;
+            TLorentzVector j_nom, j_JERUp, j_JERDown;
 
-j_nom.SetPtEtaPhiM(ptNom, Jet_eta[i], Jet_phi[i], massNom);
-j_JERUp.SetPtEtaPhiM(ptJERUp, Jet_eta[i], Jet_phi[i], massJERUp);
-j_JERDown.SetPtEtaPhiM(ptJERDown, Jet_eta[i], Jet_phi[i], massJERDown);
+            j_nom.SetPtEtaPhiM(ptNom, Jet_eta[i], Jet_phi[i], massNom);
+            j_JERUp.SetPtEtaPhiM(ptJERUp, Jet_eta[i], Jet_phi[i], massJERUp);
+            j_JERDown.SetPtEtaPhiM(ptJERDown, Jet_eta[i], Jet_phi[i], massJERDown);
 
             if (g_p4.DeltaR(j_raw) <= 0.4) continue;
-if (g_p4.DeltaR(j_nom) <= 0.4) continue;
+            if (g_p4.DeltaR(j_nom) <= 0.4) continue;
 
             goodJets.push_back(i);
-goodJetP4s_nom.push_back(j_nom);
-goodJetP4s_JERUp.push_back(j_JERUp);
-goodJetP4s_JERDown.push_back(j_JERDown);
+            goodJetP4s_nom.push_back(j_nom);
+            goodJetP4s_JERUp.push_back(j_JERUp);
+            goodJetP4s_JERDown.push_back(j_JERDown);
 
         }
         if (goodJets.size() == 0) continue;
@@ -445,41 +441,41 @@ goodJetP4s_JERDown.push_back(j_JERDown);
         TLorentzVector reco_m_p4 = reco_g_p4 + reco_j_p4;
         hM_reco_selected -> Fill(reco_m_p4.M(), weight_raw);
 
-        hM_reco_selected_PU_nom -> Fill(reco_m_p4.M(), weight_central);
-        hM_reco_selected_PU_up -> Fill(reco_m_p4.M(), weight_PUUp);
-        hM_reco_selected_PU_down -> Fill(reco_m_p4.M(), weight_PUDown);
+        h_sig -> Fill(reco_m_p4.M(), weight_central);
+        h_sig_PUUp -> Fill(reco_m_p4.M(), weight_PUUp);
+        h_sig_PUDown -> Fill(reco_m_p4.M(), weight_PUDown);
 
         hPhoton_pt->Fill(Photon_pt[goodPhotonIdx], weight_raw);
         hJet_pt->Fill(Jet_pt[goodJetIdx], weight_raw);
 
-if (goodJetP4s_nom.size() == 0) continue;
+        if (goodJetP4s_nom.size() == 0) continue;
 
-int goodJetVecIdx = GetLeadingJetIndex(goodJetP4s_nom);
-if (goodJetVecIdx < 0) continue;
+        int goodJetVecIdx = GetLeadingJetIndex(goodJetP4s_nom);
+        if (goodJetVecIdx < 0) continue;
 
-TLorentzVector reco_g_p4;
-reco_g_p4.SetPtEtaPhiM(
-    Photon_pt[goodPhotonIdx],
-    Photon_eta[goodPhotonIdx],
-    Photon_phi[goodPhotonIdx],
-    Photon_mass[goodPhotonIdx]
-);
+        TLorentzVector reco_g_p4;
+        reco_g_p4.SetPtEtaPhiM(
+                Photon_pt[goodPhotonIdx],
+                Photon_eta[goodPhotonIdx],
+                Photon_phi[goodPhotonIdx],
+                Photon_mass[goodPhotonIdx]
+                );
 
-TLorentzVector reco_j_nom     = goodJetP4s_nom[goodJetVecIdx];
-TLorentzVector reco_j_JERUp   = goodJetP4s_JERUp[goodJetVecIdx];
-TLorentzVector reco_j_JERDown = goodJetP4s_JERDown[goodJetVecIdx];
+        TLorentzVector reco_j_nom     = goodJetP4s_nom[goodJetVecIdx];
+        TLorentzVector reco_j_JERUp   = goodJetP4s_JERUp[goodJetVecIdx];
+        TLorentzVector reco_j_JERDown = goodJetP4s_JERDown[goodJetVecIdx];
 
-double m_nom     = (reco_g_p4 + reco_j_nom).M();
-double m_JERUp   = (reco_g_p4 + reco_j_JERUp).M();
-double m_JERDown = (reco_g_p4 + reco_j_JERDown).M();
+        double m_nom     = (reco_g_p4 + reco_j_nom).M();
+        double m_JERUp   = (reco_g_p4 + reco_j_JERUp).M();
+        double m_JERDown = (reco_g_p4 + reco_j_JERDown).M();
 
-h_sig->Fill(m_nom, weight_central);
+        h_sig->Fill(m_nom, weight_central);
 
-h_sig_PUUp->Fill(m_nom, weight_PUUp);
-h_sig_PUDown->Fill(m_nom, weight_PUDown);
+        h_sig_PUUp->Fill(m_nom, weight_PUUp);
+        h_sig_PUDown->Fill(m_nom, weight_PUDown);
 
-h_sig_JERUp->Fill(m_JERUp, weight_central);
-h_sig_JERDown->Fill(m_JERDown, weight_central);
+        h_sig_JERUp->Fill(m_JERUp, weight_central);
+        h_sig_JERDown->Fill(m_JERDown, weight_central);
 
 
     }//jentry
@@ -527,50 +523,50 @@ h_sig_JERDown->Fill(m_JERDown, weight_central);
     c6->SaveAs("Invariant_Mass_reco_selected.png");
 
     TCanvas *c7 = new TCanvas("c7", "Invariant Mass Reco PU Nom", 600, 400);
-    hM_reco_selected_PU_nom->Draw("HIST");
-    hM_reco_selected_PU_nom->GetXaxis()->SetTitleOffset(1.4);
-    hM_reco_selected_PU_nom->GetXaxis()->SetLabelOffset(0.02);
+    h_sig->Draw("HIST");
+    h_sig->GetXaxis()->SetTitleOffset(1.4);
+    h_sig->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
     c7->SaveAs("Invariant_Mass_reco_selected_PU_nom.png");
 
     TCanvas *c8 = new TCanvas("c8", "Invariant Mass Reco PU Up", 600, 400);
-    hM_reco_selected_PU_up->Draw("HIST");
-    hM_reco_selected_PU_up->GetXaxis()->SetTitleOffset(1.4);
-    hM_reco_selected_PU_up->GetXaxis()->SetLabelOffset(0.02);
+    h_sig_PUUp->Draw("HIST");
+    h_sig_PUUp->GetXaxis()->SetTitleOffset(1.4);
+    h_sig_PUUp->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
     c8->SaveAs("Invariant_Mass_reco_selected_PU_up.png");
 
     TCanvas *c9 = new TCanvas("c9", "Invariant Mass Reco PU Down", 600, 400);
-    hM_reco_selected_PU_down->Draw("HIST");
-    hM_reco_selected_PU_down->GetXaxis()->SetTitleOffset(1.4);
-    hM_reco_selected_PU_down->GetXaxis()->SetLabelOffset(0.02);
+    h_sig_PUDown->Draw("HIST");
+    h_sig_PUDown->GetXaxis()->SetTitleOffset(1.4);
+    h_sig_PUDown->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
     c9->SaveAs("Invariant_Mass_reco_selected_PU_down.png");
 
     TCanvas *c10 = new TCanvas("c10", "PU comparison", 600, 400);
 
-    hM_reco_selected_PU_down->SetLineColor(kBlue);
-    hM_reco_selected_PU_down->SetLineWidth(1);
+    h_sig_PUDown->SetLineColor(kBlue);
+    h_sig_PUDown->SetLineWidth(1);
 
-    hM_reco_selected_PU_nom->SetLineColor(kBlack);
-    hM_reco_selected_PU_nom->SetLineWidth(1);
+    h_sig->SetLineColor(kBlack);
+    h_sig->SetLineWidth(1);
 
-    hM_reco_selected_PU_up->SetLineColor(kRed);
-    hM_reco_selected_PU_up->SetLineWidth(1);
+    h_sig_PUUp->SetLineColor(kRed);
+    h_sig_PUUp->SetLineWidth(1);
 
-    hM_reco_selected_PU_down->Draw("HIST");
-    hM_reco_selected_PU_nom->Draw("HIST SAME");
-    hM_reco_selected_PU_up->Draw("HIST SAME");
+    h_sig_PUDown->Draw("HIST");
+    h_sig->Draw("HIST SAME");
+    h_sig_PUUp->Draw("HIST SAME");
 
 
-    hM_reco_selected_PU_nom->GetXaxis()->SetTitleOffset(1.4);
-    hM_reco_selected_PU_nom->GetXaxis()->SetLabelOffset(0.02);
+    h_sig->GetXaxis()->SetTitleOffset(1.4);
+    h_sig->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
 
     TLegend *leg = new TLegend(0.62, 0.52, 0.88, 0.68);
-    leg->AddEntry(hM_reco_selected_PU_nom, "PU nominal", "l");
-    leg->AddEntry(hM_reco_selected_PU_up,  "PU up", "l");
-    leg->AddEntry(hM_reco_selected_PU_down,"PU down", "l");
+    leg->AddEntry(h_sig, "PU nominal", "l");
+    leg->AddEntry(h_sig_PUUp,  "PU up", "l");
+    leg->AddEntry(h_sig_PUDown,"PU down", "l");
     leg->SetBorderSize(0);
     leg->Draw();
 
@@ -683,16 +679,13 @@ h_sig_JERDown->Fill(m_JERDown, weight_central);
     h_M_cstar->Write();
     hM_gen->Write();
     hM_reco_selected ->Write();
-    hM_reco_selected_PU_nom->Write("sig_puNominal");   
-    hM_reco_selected_PU_up->Write("sig_puUp");
-    hM_reco_selected_PU_down->Write("sig_puDown");
     hPhoton_pt->Write();
     hJet_pt->Write();
     h_sig->Write("sig");
-h_sig_PUUp->Write("sig_PUUp");
-h_sig_PUDown->Write("sig_PUDown");
+    h_sig_PUUp->Write("sig_PUUp");
+    h_sig_PUDown->Write("sig_PUDown");
     h_sig_JERUp->Write("sig_JERUp");
-h_sig_JERDown->Write("sig_JERDown");
+    h_sig_JERDown->Write("sig_JERDown");
     fOut->Close();
     delete fOut;
 
