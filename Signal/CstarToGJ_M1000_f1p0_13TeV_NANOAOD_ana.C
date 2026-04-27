@@ -19,8 +19,8 @@
 #include <TLegend.h>
 #include <TLine.h>
 #include <TSystem.h>
-#include "JecApplication.h"
-
+#include "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecApplication.h"
+#include <algorithm>
 // ***** CMS style/label *****
 //{{{
 void SetCMSStyle(){
@@ -69,10 +69,10 @@ double xsec = 1.307;
 // --------------------------------------------------
 int GetLeadingJetIndex(const std::vector<TLorentzVector> &jets)
 {
-    int bestIdx = -1;
+    UInt_t bestIdx = -1;
     double bestPt = -1.0;
 
-    for (int i = 0; i < (int)jets.size(); ++i) {
+    for (UInt_t i = 0; i < (UInt_t)jets.size(); ++i) {
         if (jets[i].Pt() > bestPt) {
             bestPt = jets[i].Pt();
             bestIdx = i;
@@ -174,8 +174,11 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     // -----------------------------
 
     JecConfigReader::ConfigPaths paths;
-paths.jecConfig = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK4.json";
-paths.jerSmear  = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/jer_smear.json.gz";
+
+    paths.ak4 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK4.json";
+    paths.ak8 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK8.json";
+
+    JecConfigReader::JecConfig cfg(paths);
 
 
     // MC sample:
@@ -191,8 +194,9 @@ paths.jerSmear  = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-applicat
         nb = fChain->GetEntry(jentry);   nbytes += nb;
         // if (Cut(ientry) < 0) continue;
 
-        int bin = hPU_nom->FindBin(Pileup_nTrueInt);
-        bin = std::max(1, std::min(bin, hPU_nom->GetNbinsX())); // cleaner clamp
+        UInt_t bin = hPU_nom->FindBin(Pileup_nTrueInt);
+        UInt_t nbins = (UInt_t)hPU_nom->GetNbinsX();
+        bin = std::clamp((UInt_t)bin, (UInt_t)1, nbins);
 
         // pileup reweighting factors
         double w_PU_nom  = hPU_nom->GetBinContent(bin);
@@ -211,24 +215,24 @@ paths.jerSmear  = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-applicat
 
         // ***** Gen *****
 
-        int cstarIdx = -1;
-        int genPhotonIdx = -1;
-        int genCharmIdx = -1;
+        UInt_t cstarIdx = -1;
+        UInt_t genPhotonIdx = -1;
+        UInt_t genCharmIdx = -1;
 
-        std::vector<int> cstar; //contains indices of all generated c* particles
-        for (int i= 0; i< nGenPart; ++i){
+        std::vector<UInt_t> cstar; //contains indices of all generated c* particles
+        for (UInt_t i= 0; i< nGenPart; ++i){
             if (GenPart_pdgId[i] == 4000004){
                 cstar.push_back(i);
             }
 
-        }//for (int i =0; i< nGenPart; ++i)
+        }//for (UInt_t i =0; i< nGenPart; ++i)
         if (cstar.size() == 0) continue;
 
-        for (int idx : cstar){
-            int photon = -1;
-            int charm = -1;
+        for (UInt_t idx : cstar){
+            UInt_t photon = -1;
+            UInt_t charm = -1;
 
-            for (int i= 0; i< nGenPart; ++i){
+            for (UInt_t i= 0; i< nGenPart; ++i){
                 if (GenPart_genPartIdxMother[i] != idx) continue;
                 if (GenPart_pdgId[i] == 22) photon = i;
                 if (GenPart_pdgId[i] == 4) charm = i;
@@ -240,7 +244,7 @@ paths.jerSmear  = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-applicat
                 break;
             }
 
-        }//for (int idx : cstar)
+        }//for (UInt_t idx : cstar)
         if (cstarIdx < 0) continue;
 
         // Cstar mass
@@ -251,9 +255,9 @@ paths.jerSmear  = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-applicat
         //Match Gen charm GenJet
         TLorentzVector c_p4, GenJet_p4;
 
-        int genJetIdx = -1;
+        UInt_t genJetIdx = -1;
         float best_deltaR_cJet = 999;
-        for (int j= 0; j< nGenJet; ++j){
+        for (UInt_t j= 0; j< nGenJet; ++j){
 
 
             GenJet_p4.SetPtEtaPhiM(GenJet_pt[j], GenJet_eta[j], GenJet_phi[j], GenJet_mass[j]);
@@ -264,7 +268,7 @@ paths.jerSmear  = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-applicat
                 best_deltaR_cJet = deltaR_cJet;
                 genJetIdx = j;
             }
-        }//for (int j= 0; j< nGenJet; ++j)
+        }//for (UInt_t j= 0; j< nGenJet; ++j)
         if (best_deltaR_cJet > 0.2) continue;
 
         //Gen invariant mass
@@ -279,10 +283,10 @@ paths.jerSmear  = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-applicat
         // *******************************  RECO Photon + Jet selection *******************************
 
         // Photon selection
-        int goodPhotonIdx = -1;
+        UInt_t goodPhotonIdx = -1;
         float leadingPhotonPt = -1.0;
 
-        for (int i= 0; i< nPhoton; ++i){
+        for (UInt_t i= 0; i< nPhoton; ++i){
             if (Photon_pt[i] < 240) continue;
             if (fabs(Photon_eta[i]) >= 1.4442) continue;
             if (Photon_cutBased[i] < 2) continue;
@@ -304,11 +308,11 @@ paths.jerSmear  = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-applicat
         // central, JER up, JER down
         // -----------------------------
 
-        std::vector<int> goodJets;
+        std::vector<UInt_t> goodJets;
         std::vector<TLorentzVector> goodJetP4s;
 
 
-        for (int i= 0; i < nJet; ++i){
+        for (UInt_t i= 0; i < nJet; ++i){
 
             // ***** JES nominal *****
             JecApplication::JesInputs jin;
@@ -335,27 +339,27 @@ paths.jerSmear  = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-applicat
             jrin.maxDr  = 0.2;
 
             double bestDr = 999.0;
-            int matchedGenJetIdx = -1;
+            UInt_t matchedGenJetIdx = -1;
 
-            for (int ig = 0; ig < nGenJet; ++ig) {
-        double dR = deltaR(Jet_eta[i], Jet_phi[i],
-                           GenJet_eta[ig], GenJet_phi[ig]);
+            for (UInt_t ig = 0; ig < nGenJet; ++ig) {
+                double dR = deltaR(Jet_eta[i], Jet_phi[i],
+                        GenJet_eta[ig], GenJet_phi[ig]);
 
-        if (dR < bestDr) {
-            bestDr = dR;
-            matchedGenJetIdx = ig;
-        }
-    }
+                if (dR < bestDr) {
+                    bestDr = dR;
+                    matchedGenJetIdx = ig;
+                }
+            }
             if (matchedGenJetIdx >= 0) {
-        jrin.hasGen = true;
-        jrin.genPt  = GenJet_pt[matchedGenJetIdx];
-        jrin.genEta = GenJet_eta[matchedGenJetIdx];
-        jrin.genPhi = GenJet_phi[matchedGenJetIdx];
-    }
+                jrin.hasGen = true;
+                jrin.genPt  = GenJet_pt[matchedGenJetIdx];
+                jrin.genEta = GenJet_eta[matchedGenJetIdx];
+                jrin.genPhi = GenJet_phi[matchedGenJetIdx];
+            }
             // jerFactor() itself checks:
-    //   DeltaR < maxDr
-    //   |ptReco - ptGen| < 3 * resolution * ptReco
-    // If failed, it automatically uses stochastic smearing.
+            //   DeltaR < maxDr
+            //   |ptReco - ptGen| < 3 * resolution * ptReco
+            // If failed, it automatically uses stochastic smearing.
 
             double jer = jec.jerFactor(
                     {ptAfterJes, Jet_eta[i], Jet_phi[i],
@@ -391,11 +395,11 @@ paths.jerSmear  = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-applicat
 
 
         // Select Leading Jet
-        int goodJetIdx = -1;
-        int goodJetVecIdx = -1;
+        UInt_t goodJetIdx = -1;
+        UInt_t goodJetVecIdx = -1;
         float leadingJetPt = -1.0;
 
-        for (int k = 0; k < (int)goodJets.size(); ++k) {
+        for (UInt_t k = 0; k < (UInt_t)goodJets.size(); ++k) {
             if (goodJetP4s[k].Pt() > leadingJetPt) {
                 goodJetIdx = goodJets[k];
                 goodJetVecIdx = k;
