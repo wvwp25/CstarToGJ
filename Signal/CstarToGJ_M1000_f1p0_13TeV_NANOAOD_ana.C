@@ -414,9 +414,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
         
 
-        hPhoton_pt->Fill(Photon_pt[goodPhotonIdx], weight_raw);
-        hJet_pt->Fill(Jet_pt[goodJetIdx], weight_raw);
-
+        
         if (goodJetP4s_nom.size() == 0) continue;
 
         int goodJetVecIdx = GetLeadingJetIndex(goodJetP4s_nom);
@@ -437,6 +435,11 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         double m_nom     = (reco_g_p4 + reco_j_nom).M();
         double m_JERUp   = (reco_g_p4 + reco_j_JERUp).M();
         double m_JERDown = (reco_g_p4 + reco_j_JERDown).M();
+
+        hM_reco_selected->Fill(m_nom, weight_raw);
+
+        hPhoton_pt->Fill(Photon_pt[goodPhotonIdx], weight_central);
+hJet_pt->Fill(reco_j_nom.Pt(), weight_central);
 
         h_sig->Fill(m_nom, weight_central);
 
