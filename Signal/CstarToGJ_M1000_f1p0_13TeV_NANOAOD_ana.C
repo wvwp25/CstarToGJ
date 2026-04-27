@@ -15,7 +15,11 @@
 #include <string>
 #include <algorithm>
 #include <random>
-
+#include <TVector2.h>
+#include <TLegend.h>
+#include <TLine.h>
+#include <TSystem.h>
+#include "JecApplication.h"
 
 // ***** CMS style/label *****
 //{{{
@@ -77,6 +81,12 @@ int GetLeadingJetIndex(const std::vector<TLorentzVector> &jets)
     return bestIdx;
 }
 
+double deltaR(double eta1, double phi1, double eta2, double phi2)
+{
+    double dphi = TVector2::Phi_mpi_pi(phi1 - phi2);
+    double deta = eta1 - eta2;
+    return std::sqrt(deta*deta + dphi*dphi);
+}
 
 void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 {
@@ -162,6 +172,18 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     // -----------------------------
     // Main event loop
     // -----------------------------
+
+    JecConfigReader::ConfigPaths paths;
+paths.jecConfig = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK4.json";
+paths.jerSmear  = "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/jer_smear.json.gz";
+
+
+    // MC sample:
+    auto jec = JecApplication::Applier::McAK4(cfg, "2017", false);
+
+    JecApplication::SystematicOptions systNom;
+    systNom.jerVar = "nom";
+
     Long64_t nbytes = 0, nb = 0;
     for (Long64_t jentry=0; jentry<nentries;jentry++) {
         Long64_t ientry = LoadTree(jentry);
@@ -184,7 +206,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         double weight_PUUp    = weight_raw * w_PU_up;
         double weight_PUDown  = weight_raw * w_PU_down;
 
-        
+
         if (nPhoton < 1 || nJet < 1 || nGenPart <= 0 || nGenJet <= 0)   continue;
 
         // ***** Gen *****
@@ -232,6 +254,8 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         int genJetIdx = -1;
         float best_deltaR_cJet = 999;
         for (int j= 0; j< nGenJet; ++j){
+
+
             GenJet_p4.SetPtEtaPhiM(GenJet_pt[j], GenJet_eta[j], GenJet_phi[j], GenJet_mass[j]);
             c_p4.SetPtEtaPhiM(GenPart_pt[genCharmIdx], GenPart_eta[genCharmIdx], GenPart_phi[genCharmIdx], GenPart_mass[genCharmIdx]);
 
@@ -281,13 +305,70 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         // -----------------------------
 
         std::vector<int> goodJets;
+        std::vector<TLorentzVector> goodJetP4s;
 
-        std::vector<TLorentzVector> goodJets_central;
-        std::vector<TLorentzVector> goodJets_JERUp;
-        std::vector<TLorentzVector> goodJets_JERDown;
 
         for (int i= 0; i < nJet; ++i){
-            if (Jet_pt[i] < 170) continue;
+
+            // ***** JES nominal *****
+            JecApplication::JesInputs jin;
+            jin.pt        = Jet_pt[i];
+            jin.eta       = Jet_eta[i];
+            jin.phi       = Jet_phi[i];
+            jin.area      = Jet_area[i];
+            jin.rho       = fixedGridRhoFastjetAll;
+            jin.rawFactor = Jet_rawFactor[i];
+
+            double jes = jec.jesFactorNominal(jin);
+
+            // Rebuild raw jet
+            double rawPt   = Jet_pt[i]   * (1.0 - Jet_rawFactor[i]);
+            double rawMass = Jet_mass[i] * (1.0 - Jet_rawFactor[i]);
+
+            double ptAfterJes   = rawPt   * jes;
+            double massAfterJes = rawMass * jes;
+
+            // ***** Hybrid JER matching *****
+            JecApplication::JerInputs jrin;
+            jrin.hasGen = false;      
+            jrin.event  = jentry;
+            jrin.maxDr  = 0.2;
+
+            double bestDr = 999.0;
+            int matchedGenJetIdx = -1;
+
+            for (int ig = 0; ig < nGenJet; ++ig) {
+        double dR = deltaR(Jet_eta[i], Jet_phi[i],
+                           GenJet_eta[ig], GenJet_phi[ig]);
+
+        if (dR < bestDr) {
+            bestDr = dR;
+            matchedGenJetIdx = ig;
+        }
+    }
+            if (matchedGenJetIdx >= 0) {
+        jrin.hasGen = true;
+        jrin.genPt  = GenJet_pt[matchedGenJetIdx];
+        jrin.genEta = GenJet_eta[matchedGenJetIdx];
+        jrin.genPhi = GenJet_phi[matchedGenJetIdx];
+    }
+            // jerFactor() itself checks:
+    //   DeltaR < maxDr
+    //   |ptReco - ptGen| < 3 * resolution * ptReco
+    // If failed, it automatically uses stochastic smearing.
+
+            double jer = jec.jerFactor(
+                    {ptAfterJes, Jet_eta[i], Jet_phi[i],
+                    Jet_area[i], fixedGridRhoFastjetAll, 0.0},
+                    jrin,
+                    systNom
+                    );
+
+            // final corrected jet
+            double ptCorr   = ptAfterJes * jer;
+            double massCorr = massAfterJes * jer;
+
+            if (ptCorr < 170) continue;
             if (fabs(Jet_eta[i]) >= 2.4) continue;
             if (Jet_jetId[i] < 6) continue;
             if (Jet_btagDeepFlavCvB[i] < 0.340) continue;
@@ -296,8 +377,14 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
             TLorentzVector j_raw;
             j_raw.SetPtEtaPhiM(Jet_pt[i], Jet_eta[i], Jet_phi[i], Jet_mass[i]);
 
+            TLorentzVector j_corr;
+            j_corr.SetPtEtaPhiM(ptCorr, Jet_eta[i], Jet_phi[i], massCorr);
+
+
             if (g_p4.DeltaR(j_raw) <= 0.4) continue;
+            if (g_p4.DeltaR(j_corr) <= 0.4) continue;
             goodJets.push_back(i);
+            goodJetP4s.push_back(j_corr);
         }
         if (goodJets.size() == 0) continue;
 
@@ -305,12 +392,14 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
         // Select Leading Jet
         int goodJetIdx = -1;
+        int goodJetVecIdx = -1;
         float leadingJetPt = -1.0;
 
-        for (int idx : goodJets){
-            if (Jet_pt[idx] > leadingJetPt){
-                goodJetIdx = idx;
-                leadingJetPt = Jet_pt[idx];
+        for (int k = 0; k < (int)goodJets.size(); ++k) {
+            if (goodJetP4s[k].Pt() > leadingJetPt) {
+                goodJetIdx = goodJets[k];
+                goodJetVecIdx = k;
+                leadingJetPt = goodJetP4s[k].Pt();
             }
         }
 
@@ -318,9 +407,9 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
         // *********** RECO Invatiant Mass ( selected RECO leadnig photon + RECO leading jet) ***********
 
-        TLorentzVector reco_g_p4, reco_j_p4;
+        TLorentzVector reco_g_p4;
         reco_g_p4.SetPtEtaPhiM(Photon_pt[goodPhotonIdx], Photon_eta[goodPhotonIdx], Photon_phi[goodPhotonIdx], Photon_mass[goodPhotonIdx]);
-        reco_j_p4.SetPtEtaPhiM(Jet_pt[goodJetIdx], Jet_eta[goodJetIdx], Jet_phi[goodJetIdx], Jet_mass[goodJetIdx]);
+        TLorentzVector reco_j_p4 = goodJetP4s[goodJetVecIdx];
 
         TLorentzVector reco_m_p4 = reco_g_p4 + reco_j_p4;
         hM_reco_selected -> Fill(reco_m_p4.M(), weight_raw);
