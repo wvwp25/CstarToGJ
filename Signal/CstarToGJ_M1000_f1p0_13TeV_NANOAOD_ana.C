@@ -177,8 +177,47 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     paths.ak8 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK8.json";
 
     JecConfigReader::JecConfig cfg(paths);
-    auto jesUncRefs = cfg.getJesUncSetsMcAK4Ref("2017");
-    auto jesTotalRef = jesUncRefs.total.at("Total");
+    
+//////////////////////////////////////////////////////////////   
+std::ofstream fout("jes_sources.txt");
+
+auto jesUncRefs = cfg.getJesUncSetsMcAK4Ref("2017");
+auto jesTotalRef = jesUncRefs.total.begin()->second;
+//{{{
+//correction::Correction::Ref jesTotalRef = nullptr;
+//
+//if (!jesUncRefs.total.empty()) {
+//    jesTotalRef = jesUncRefs.total.begin()->second;
+//
+//    fout << "Using JES total source: "
+//         << jesUncRefs.total.begin()->first << std::endl;
+//
+//} else if (!jesUncRefs.full.empty()) {
+//    jesTotalRef = jesUncRefs.full.begin()->second;
+//
+//    fout << "Using JES full source: "
+//         << jesUncRefs.full.begin()->first << std::endl;
+//
+//} else {
+//    fout << "No JES uncertainty sources found!" << std::endl;
+//    throw std::runtime_error("No JES uncertainty sources found!");
+//}
+//
+//fout << "\n=== All TOTAL sources ===\n";
+//for (const auto &kv : jesUncRefs.total)
+//    fout << kv.first << std::endl;
+//
+//fout << "\n=== All FULL sources ===\n";
+//for (const auto &kv : jesUncRefs.full)
+//    fout << kv.first << std::endl;
+//
+//fout << "\n=== All REDUCED sources ===\n";
+//for (const auto &kv : jesUncRefs.reduced)
+//    fout << kv.first << std::endl;
+//
+//fout.close();
+//////////////////////////////////////////////////////////////   
+//}}}
 
 
     // MC sample:
