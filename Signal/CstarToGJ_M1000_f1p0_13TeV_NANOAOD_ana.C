@@ -741,6 +741,63 @@ auto jesTotalRef = jesUncRefs.total.begin()->second;
 
     cPUcomp->SaveAs("Pileup_Data_vs_MC_ratio.png");
 
+// =====================
+// JER comparison
+// =====================
+TCanvas *cJER = new TCanvas("cJER", "JER comparison", 600, 400);
+
+h_sig_JERDown->SetLineColor(kBlue);
+h_sig_JERDown->SetLineWidth(1);
+
+h_sig->SetLineColor(kBlack);
+h_sig->SetLineWidth(1);
+
+h_sig_JERUp->SetLineColor(kRed);
+h_sig_JERUp->SetLineWidth(1);
+
+h_sig_JERDown->Draw("HIST");
+h_sig->Draw("HIST SAME");
+h_sig_JERUp->Draw("HIST SAME");
+
+TLegend *legJER = new TLegend(0.62,0.52,0.88,0.68);
+legJER->AddEntry(h_sig,"Nominal","l");
+legJER->AddEntry(h_sig_JERUp,"JER Up","l");
+legJER->AddEntry(h_sig_JERDown,"JER Down","l");
+legJER->SetBorderSize(0);
+legJER->Draw();
+
+CMS_label(0.18,0.87);
+cJER->SaveAs("Invariant_Mass_JER_compare.png");
+
+
+// =====================
+// JES comparison
+// =====================
+TCanvas *cJES = new TCanvas("cJES", "JES comparison", 600, 400);
+
+h_sig_JESDown->SetLineColor(kBlue);
+h_sig_JESDown->SetLineWidth(1);
+
+h_sig->SetLineColor(kBlack);
+h_sig->SetLineWidth(1);
+
+h_sig_JESUp->SetLineColor(kRed);
+h_sig_JESUp->SetLineWidth(1);
+
+h_sig_JESDown->Draw("HIST");
+h_sig->Draw("HIST SAME");
+h_sig_JESUp->Draw("HIST SAME");
+
+TLegend *legJES = new TLegend(0.62,0.52,0.88,0.68);
+legJES->AddEntry(h_sig,"Nominal","l");
+legJES->AddEntry(h_sig_JESUp,"JES Up","l");
+legJES->AddEntry(h_sig_JESDown,"JES Down","l");
+legJES->SetBorderSize(0);
+legJES->Draw();
+
+CMS_label(0.18,0.87);
+cJES->SaveAs("Invariant_Mass_JES_compare.png");
+
 
     TFile *fOut = new TFile("CstarToGJ.root", "RECREATE");
     h_M_cstar->Write();
