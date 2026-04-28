@@ -124,7 +124,6 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
 
     hM_gen ->Sumw2();
-    hM_reco->Sumw2();
     hPhoton_pt->Sumw2();
     hJet_pt->Sumw2();
     hM_reco_selected->Sumw2();
@@ -178,6 +177,8 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     paths.ak8 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK8.json";
 
     JecConfigReader::JecConfig cfg(paths);
+    auto jesUncRefs = cfg.getJesUncSetsMcAK4Ref("2017");
+    auto jesTotalRef = jesUncRefs.total.at("Total");
 
 
     // MC sample:
@@ -330,22 +331,36 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
             jin.rho       = fixedGridRhoFastjetAll;
             jin.rawFactor = Jet_rawFactor[i];
 
-            double jes = jec.jesFactorNominal(jin);
-            double jesUp   = jec.jesFactor(jin, "up");
-            double jesDown = jec.jesFactor(jin, "down");//need check if it's jec.jesFactorUp
+            double jesNom = jec.jesFactorNominal(jin);
 
             // Rebuild raw jet
             double rawPt   = Jet_pt[i]   * (1.0 - Jet_rawFactor[i]);
             double rawMass = Jet_mass[i] * (1.0 - Jet_rawFactor[i]);
 
-            double ptAfterJes   = rawPt   * jes;
-            double massAfterJes = rawMass * jes;
+            double ptAfterJes   = rawPt   * jesNom;
+            double massAfterJes = rawMass * jesNom;
 
-            double ptAfterJesUp     = rawPt   * jesUp;
-            double massAfterJesUp   = rawMass * jesUp;
+            double jesUncUp = JecApplication::Applier::jesComponentSyst(
+                    jesTotalRef,
+                    "Up",
+                    Jet_eta[i],
+                    ptAfterJes,
+                    false
+                    );
 
-            double ptAfterJesDown   = rawPt   * jesDown;
-            double massAfterJesDown = rawMass * jesDown;
+            double jesUncDown = JecApplication::Applier::jesComponentSyst(
+                    jesTotalRef,
+                    "Down",
+                    Jet_eta[i],
+                    ptAfterJes,
+                    false
+                    );
+
+            double ptAfterJesUp     = ptAfterJes   * jesUncUp;
+            double massAfterJesUp   = massAfterJes * jesUncUp;
+
+            double ptAfterJesDown   = ptAfterJes   * jesUncDown;
+            double massAfterJesDown = massAfterJes * jesUncDown;
 
             // ***** Hybrid JER matching *****
             JecApplication::JerInputs jrin;
