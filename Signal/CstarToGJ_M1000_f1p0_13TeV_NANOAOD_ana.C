@@ -21,6 +21,9 @@
 #include <TSystem.h>
 #include "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecApplication.h"
 #include <algorithm>
+//#include "correction.h"
+
+
 // ***** CMS style/label *****
 //{{{
 void SetCMSStyle(){
@@ -113,6 +116,13 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     TH1D *h_sig_JESUp  = new TH1D("h_sig_JESUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
     TH1D *h_sig_JESDown= new TH1D("h_sig_JESDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
     TH1D *hPU_MC = new TH1D("hPU_MC", "MC PU;True interactions;Events", 100, 0, 100);
+
+    TH1D *h_sig_PERUp  = new TH1D("h_sig_PERUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+    TH1D *h_sig_PERDown= new TH1D("h_sig_PERDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+    TH1D *h_sig_PESUp  = new TH1D("h_sig_PESUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+    TH1D *h_sig_PESDown= new TH1D("h_sig_PESDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+
+
     //}}}
 
 
@@ -177,48 +187,17 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     paths.ak8 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK8.json";
 
     JecConfigReader::JecConfig cfg(paths);
-    
-//////////////////////////////////////////////////////////////   
-std::ofstream fout("jes_sources.txt");
 
-auto jesUncRefs = cfg.getJesUncSetsMcAK4Ref("2017");
-auto jesTotalRef = jesUncRefs.total.begin()->second;
-//{{{
-//correction::Correction::Ref jesTotalRef = nullptr;
-//
-//if (!jesUncRefs.total.empty()) {
-//    jesTotalRef = jesUncRefs.total.begin()->second;
-//
-//    fout << "Using JES total source: "
-//         << jesUncRefs.total.begin()->first << std::endl;
-//
-//} else if (!jesUncRefs.full.empty()) {
-//    jesTotalRef = jesUncRefs.full.begin()->second;
-//
-//    fout << "Using JES full source: "
-//         << jesUncRefs.full.begin()->first << std::endl;
-//
-//} else {
-//    fout << "No JES uncertainty sources found!" << std::endl;
-//    throw std::runtime_error("No JES uncertainty sources found!");
-//}
-//
-//fout << "\n=== All TOTAL sources ===\n";
-//for (const auto &kv : jesUncRefs.total)
-//    fout << kv.first << std::endl;
-//
-//fout << "\n=== All FULL sources ===\n";
-//for (const auto &kv : jesUncRefs.full)
-//    fout << kv.first << std::endl;
-//
-//fout << "\n=== All REDUCED sources ===\n";
-//for (const auto &kv : jesUncRefs.reduced)
-//    fout << kv.first << std::endl;
-//
-//fout.close();
-//////////////////////////////////////////////////////////////   
-//}}}
+    //////////////////////////////////////////////////////////////   
+    std::ofstream fout("jes_sources.txt");
 
+    auto jesUncRefs = cfg.getJesUncSetsMcAK4Ref("2017");
+    auto jesTotalRef = jesUncRefs.total.begin()->second;
+    auto cs = correction::CorrectionSet::from_file(
+            "/eos/user/h/hsiaoche/Signal/uncertainty_sources/EGM_ScaleUnc.json.gz"
+            );
+
+    auto egmScale = cs->at("UL-EGM_ScaleUnc");
 
     // MC sample:
     auto jec = JecApplication::Applier::McAK4(cfg, "2017", false);
@@ -255,6 +234,10 @@ auto jesTotalRef = jesUncRefs.total.begin()->second;
         double weight_PUUp    = weight_raw * w_PU_up;
         double weight_PUDown  = weight_raw * w_PU_down;
 
+        if (jentry < 20){
+            std::cout << "Event " << jentry << " | weight up = " << weight_PUUp << std::endl;
+            std::cout << "Event " << jentry << " | weight down = " << weight_PUDown << std::endl;
+        }
 
         if (nPhoton < 1 || nJet < 1 || nGenPart <= 0 || nGenJet <= 0)   continue;
 
@@ -347,6 +330,34 @@ auto jesTotalRef = jesUncRefs.total.begin()->second;
 
         TLorentzVector g_p4;
         g_p4.SetPtEtaPhiM(Photon_pt[goodPhotonIdx], Photon_eta[goodPhotonIdx], Photon_phi[goodPhotonIdx], Photon_mass[goodPhotonIdx]);
+
+        double pho_pt  = Photon_pt[goodPhotonIdx];
+        double pho_eta = Photon_eta[goodPhotonIdx];
+        double pho_phi = Photon_phi[goodPhotonIdx];
+        double pho_m   = Photon_mass[goodPhotonIdx];
+
+        // --- Get scale factors from JSON ---
+        double scaleUp = egmScale->evaluate({
+                "2017",
+                "scaleup",
+                pho_eta,
+                12.0   // gain (use 12 if not available)
+                });
+
+        double scaleDown = egmScale->evaluate({
+                "2017",
+                "scaledown",
+                pho_eta,
+                12.0
+                });
+
+        // --- Build photons ---
+        TLorentzVector g_nom, g_PESUp, g_PESDown;
+
+        g_nom.SetPtEtaPhiM(pho_pt, pho_eta, pho_phi, pho_m);
+        g_PESUp.SetPtEtaPhiM(pho_pt * scaleUp, pho_eta, pho_phi, pho_m);
+        g_PESDown.SetPtEtaPhiM(pho_pt * scaleDown, pho_eta, pho_phi, pho_m);
+
 
         // -----------------------------
         // Jet selection:
@@ -476,6 +487,7 @@ auto jesTotalRef = jesUncRefs.total.begin()->second;
             double ptJERDown   = ptAfterJes * jerDown;
             double massJERDown = massAfterJes * jerDown;
 
+
             if (ptNom < 170) continue;
             if (fabs(Jet_eta[i]) >= 2.4) continue;
             if (Jet_jetId[i] < 6) continue;
@@ -528,6 +540,9 @@ auto jesTotalRef = jesUncRefs.total.begin()->second;
         double m_JERDown = (reco_g_p4 + reco_j_JERDown).M();
         double m_JESUp   = (reco_g_p4 + reco_j_JESUp).M();
         double m_JESDown = (reco_g_p4 + reco_j_JESDown).M();
+        double m_nom     = (g_nom     + reco_j_nom).M();
+        double m_PESUp   = (g_PESUp   + reco_j_nom).M();
+        double m_PESDown = (g_PESDown + reco_j_nom).M();
 
         hM_reco_selected->Fill(m_nom, weight_raw);
 
@@ -544,6 +559,9 @@ auto jesTotalRef = jesUncRefs.total.begin()->second;
 
         h_sig_JESUp->Fill(m_JESUp, weight_central);
         h_sig_JESDown->Fill(m_JESDown, weight_central);
+
+        h_sig_PESUp->Fill(m_PESUp, weight_central);
+        h_sig_PESDown->Fill(m_PESDown, weight_central);
 
     }//jentry
 
@@ -594,23 +612,67 @@ auto jesTotalRef = jesUncRefs.total.begin()->second;
     h_sig->GetXaxis()->SetTitleOffset(1.4);
     h_sig->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c7->SaveAs("Invariant_Mass_reco_selected_PU_nom.png");
+    c7->SaveAs("Invariant_Mass_PU_nom.png");
 
     TCanvas *c8 = new TCanvas("c8", "Invariant Mass Reco PU Up", 600, 400);
     h_sig_PUUp->Draw("HIST");
     h_sig_PUUp->GetXaxis()->SetTitleOffset(1.4);
     h_sig_PUUp->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c8->SaveAs("Invariant_Mass_reco_selected_PU_up.png");
+    c8->SaveAs("Invariant_Mass_PU_up.png");
 
     TCanvas *c9 = new TCanvas("c9", "Invariant Mass Reco PU Down", 600, 400);
     h_sig_PUDown->Draw("HIST");
     h_sig_PUDown->GetXaxis()->SetTitleOffset(1.4);
     h_sig_PUDown->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c9->SaveAs("Invariant_Mass_reco_selected_PU_down.png");
+    c9->SaveAs("Invariant_Mass_PU_down.png");
 
-    TCanvas *c10 = new TCanvas("c10", "PU comparison", 600, 400);
+    TCanvas *c10 = new TCanvas("c8", "Invariant Mass Reco JES Up", 600, 400);
+    h_sig_JESUp->Draw("HIST");
+    h_sig_JESUp->GetXaxis()->SetTitleOffset(1.4);
+    h_sig_JESUp->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c10->SaveAs("Invariant_Mass_JES_up.png");
+
+    TCanvas *c11 = new TCanvas("c9", "Invariant Mass Reco JES Down", 600, 400);
+    h_sig_JESDown->Draw("HIST");
+    h_sig_JESDown->GetXaxis()->SetTitleOffset(1.4);
+    h_sig_JESDown->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c11->SaveAs("Invariant_Mass_JES_down.png");
+
+    TCanvas *c12 = new TCanvas("c8", "Invariant Mass Reco JER Up", 600, 400);
+    h_sig_JERUp->Draw("HIST");
+    h_sig_JERUp->GetXaxis()->SetTitleOffset(1.4);
+    h_sig_JERUp->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c12->SaveAs("Invariant_Mass_JER_up.png");
+
+    TCanvas *c13 = new TCanvas("c9", "Invariant Mass Reco JER Down", 600, 400);
+    h_sig_JERDown->Draw("HIST");
+    h_sig_JERDown->GetXaxis()->SetTitleOffset(1.4);
+    h_sig_JERDown->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c13->SaveAs("Invariant_Mass_JER_down.png");
+
+    TCanvas *c14 = new TCanvas("c8", "Invariant Mass Reco PES Up", 600, 400);
+    h_sig_PESUp->Draw("HIST");
+    h_sig_PESUp->GetXaxis()->SetTitleOffset(1.4);
+    h_sig_PESUp->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c14->SaveAs("Invariant_Mass_PES_up.png");
+
+    TCanvas *c15 = new TCanvas("c9", "Invariant Mass Reco PES Down", 600, 400);
+    h_sig_PESDown->Draw("HIST");
+    h_sig_PESDown->GetXaxis()->SetTitleOffset(1.4);
+    h_sig_PESDown->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c15->SaveAs("Invariant_Mass_PES_down.png");
+
+
+
+    TCanvas *c20 = new TCanvas("c10", "PU comparison", 600, 400);
 
     h_sig_PUDown->SetLineColor(kBlue);
     h_sig_PUDown->SetLineWidth(1);
@@ -637,7 +699,7 @@ auto jesTotalRef = jesUncRefs.total.begin()->second;
     leg->SetBorderSize(0);
     leg->Draw();
 
-    c10->SaveAs("Invariant_Mass_reco_selected_PU_compare.png");
+    c20->SaveAs("Invariant_Mass_reco_selected_PU_compare.png");
 
     //===============
     //PU comparison
@@ -741,62 +803,62 @@ auto jesTotalRef = jesUncRefs.total.begin()->second;
 
     cPUcomp->SaveAs("Pileup_Data_vs_MC_ratio.png");
 
-// =====================
-// JER comparison
-// =====================
-TCanvas *cJER = new TCanvas("cJER", "JER comparison", 600, 400);
+    // =====================
+    // JER comparison
+    // =====================
+    TCanvas *cJER = new TCanvas("cJER", "JER comparison", 600, 400);
 
-h_sig_JERDown->SetLineColor(kBlue);
-h_sig_JERDown->SetLineWidth(1);
+    h_sig_JERDown->SetLineColor(kBlue);
+    h_sig_JERDown->SetLineWidth(1);
 
-h_sig->SetLineColor(kBlack);
-h_sig->SetLineWidth(1);
+    h_sig->SetLineColor(kBlack);
+    h_sig->SetLineWidth(1);
 
-h_sig_JERUp->SetLineColor(kRed);
-h_sig_JERUp->SetLineWidth(1);
+    h_sig_JERUp->SetLineColor(kRed);
+    h_sig_JERUp->SetLineWidth(1);
 
-h_sig_JERDown->Draw("HIST");
-h_sig->Draw("HIST SAME");
-h_sig_JERUp->Draw("HIST SAME");
+    h_sig_JERDown->Draw("HIST");
+    h_sig->Draw("HIST SAME");
+    h_sig_JERUp->Draw("HIST SAME");
 
-TLegend *legJER = new TLegend(0.62,0.52,0.88,0.68);
-legJER->AddEntry(h_sig,"Nominal","l");
-legJER->AddEntry(h_sig_JERUp,"JER Up","l");
-legJER->AddEntry(h_sig_JERDown,"JER Down","l");
-legJER->SetBorderSize(0);
-legJER->Draw();
+    TLegend *legJER = new TLegend(0.62,0.52,0.88,0.68);
+    legJER->AddEntry(h_sig,"Nominal","l");
+    legJER->AddEntry(h_sig_JERUp,"JER Up","l");
+    legJER->AddEntry(h_sig_JERDown,"JER Down","l");
+    legJER->SetBorderSize(0);
+    legJER->Draw();
 
-CMS_label(0.18,0.87);
-cJER->SaveAs("Invariant_Mass_JER_compare.png");
+    CMS_label(0.18,0.87);
+    cJER->SaveAs("Invariant_Mass_JER_compare.png");
 
 
-// =====================
-// JES comparison
-// =====================
-TCanvas *cJES = new TCanvas("cJES", "JES comparison", 600, 400);
+    // =====================
+    // JES comparison
+    // =====================
+    TCanvas *cJES = new TCanvas("cJES", "JES comparison", 600, 400);
 
-h_sig_JESDown->SetLineColor(kBlue);
-h_sig_JESDown->SetLineWidth(1);
+    h_sig_JESDown->SetLineColor(kBlue);
+    h_sig_JESDown->SetLineWidth(1);
 
-h_sig->SetLineColor(kBlack);
-h_sig->SetLineWidth(1);
+    h_sig->SetLineColor(kBlack);
+    h_sig->SetLineWidth(1);
 
-h_sig_JESUp->SetLineColor(kRed);
-h_sig_JESUp->SetLineWidth(1);
+    h_sig_JESUp->SetLineColor(kRed);
+    h_sig_JESUp->SetLineWidth(1);
 
-h_sig_JESDown->Draw("HIST");
-h_sig->Draw("HIST SAME");
-h_sig_JESUp->Draw("HIST SAME");
+    h_sig_JESDown->Draw("HIST");
+    h_sig->Draw("HIST SAME");
+    h_sig_JESUp->Draw("HIST SAME");
 
-TLegend *legJES = new TLegend(0.62,0.52,0.88,0.68);
-legJES->AddEntry(h_sig,"Nominal","l");
-legJES->AddEntry(h_sig_JESUp,"JES Up","l");
-legJES->AddEntry(h_sig_JESDown,"JES Down","l");
-legJES->SetBorderSize(0);
-legJES->Draw();
+    TLegend *legJES = new TLegend(0.62,0.52,0.88,0.68);
+    legJES->AddEntry(h_sig,"Nominal","l");
+    legJES->AddEntry(h_sig_JESUp,"JES Up","l");
+    legJES->AddEntry(h_sig_JESDown,"JES Down","l");
+    legJES->SetBorderSize(0);
+    legJES->Draw();
 
-CMS_label(0.18,0.87);
-cJES->SaveAs("Invariant_Mass_JES_compare.png");
+    CMS_label(0.18,0.87);
+    cJES->SaveAs("Invariant_Mass_JES_compare.png");
 
 
     TFile *fOut = new TFile("CstarToGJ.root", "RECREATE");
@@ -812,6 +874,8 @@ cJES->SaveAs("Invariant_Mass_JES_compare.png");
     h_sig_JERDown->Write("sig_JERDown");
     h_sig_JESUp->Write("sig_JESUp");
     h_sig_JESDown->Write("sig_JESDown");
+    h_sig_PESUp->Write("sig_PESUp");
+    h_sig_PESDown->Write("sig_PESDown");
     fOut->Close();
     delete fOut;
 
