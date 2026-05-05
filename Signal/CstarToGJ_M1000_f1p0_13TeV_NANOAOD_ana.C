@@ -689,7 +689,64 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
     SetCMSStyle();
 
+//{{{
+
+    // =============================
+// Weighted yield summary output
+// =============================
+std::ofstream yieldOut("weighted_yield_summary.txt");
+
+if (!yieldOut.is_open()) {
+    std::cerr << "ERROR: cannot open weighted_yield_summary.txt" << std::endl;
+} else {
+
+    double y_nom    = h_sig->Integral();
+    double y_PUUp   = h_sig_PUUp->Integral();
+    double y_PUDown = h_sig_PUDown->Integral();
+
+    double y_CTagUp   = h_sig_CTagUp->Integral();
+    double y_CTagDown = h_sig_CTagDown->Integral();
+
+    yieldOut << "===== PU weighted yield check =====\n\n";
+
+    yieldOut << "Nominal integral = " << y_nom << "\n";
+    yieldOut << "PUUp integral    = " << y_PUUp << "\n";
+    yieldOut << "PUDown integral  = " << y_PUDown << "\n\n";
+
+    yieldOut << "PUUp / Nominal   = " << y_PUUp / y_nom << "\n";
+    yieldOut << "PUDown / Nominal = " << y_PUDown / y_nom << "\n\n";
+
+    yieldOut << "PUUp change (%)   = "
+             << 100.0 * (y_PUUp / y_nom - 1.0) << " %\n";
+
+    yieldOut << "PUDown change (%) = "
+             << 100.0 * (y_PUDown / y_nom - 1.0) << " %\n\n";
+
+
+    yieldOut << "===== CTag weighted yield check =====\n\n";
+
+    yieldOut << "Nominal integral  = " << y_nom << "\n";
+    yieldOut << "CTagUp integral   = " << y_CTagUp << "\n";
+    yieldOut << "CTagDown integral = " << y_CTagDown << "\n\n";
+
+    yieldOut << "CTagUp / Nominal   = " << y_CTagUp / y_nom << "\n";
+    yieldOut << "CTagDown / Nominal = " << y_CTagDown / y_nom << "\n\n";
+
+    yieldOut << "CTagUp change (%)   = "
+             << 100.0 * (y_CTagUp / y_nom - 1.0) << " %\n";
+
+    yieldOut << "CTagDown change (%) = "
+             << 100.0 * (y_CTagDown / y_nom - 1.0) << " %\n";
+
+    yieldOut.close();
+
+    std::cout << "Saved weighted yield summary to weighted_yield_summary.txt" << std::endl;
+}
+
+//}}}
+
     gROOT->SetBatch(kTRUE); // run without opening any windows
+
 
     TCanvas *c1 = new TCanvas("c1", "Invariant Mass Gen", 600, 400);
     hM_gen->Draw("HIST");
@@ -740,6 +797,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     h_sig_PUUp->Draw("HIST");
     h_sig_PUUp->GetXaxis()->SetTitleOffset(1.4);
     h_sig_PUUp->GetXaxis()->SetLabelOffset(0.02);
+    h_sig_PUUp->SetStats(0);
     CMS_label(0.18, 0.87);
     c8->SaveAs("Invariant_Mass_PU_up.png");
 
@@ -747,6 +805,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     h_sig_PUDown->Draw("HIST");
     h_sig_PUDown->GetXaxis()->SetTitleOffset(1.4);
     h_sig_PUDown->GetXaxis()->SetLabelOffset(0.02);
+    h_sig_PUDown->SetStats(0);
     CMS_label(0.18, 0.87);
     c9->SaveAs("Invariant_Mass_PU_down.png");
 
@@ -796,6 +855,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     h_sig_CTagUp->Draw("HIST");
     h_sig_CTagUp->GetXaxis()->SetTitleOffset(1.4);
     h_sig_CTagUp->GetXaxis()->SetLabelOffset(0.02);
+    h_sig_CTagUp->SetStats(0);
     CMS_label(0.18, 0.87);
     c16->SaveAs("Invariant_Mass_CTag_up.png");
 
@@ -803,6 +863,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     h_sig_CTagDown->Draw("HIST");
     h_sig_CTagDown->GetXaxis()->SetTitleOffset(1.4);
     h_sig_CTagDown->GetXaxis()->SetLabelOffset(0.02);
+    h_sig_CTagDown->SetStats(0);
     CMS_label(0.18, 0.87);
     c17->SaveAs("Invariant_Mass_CTag_down.png");
 
