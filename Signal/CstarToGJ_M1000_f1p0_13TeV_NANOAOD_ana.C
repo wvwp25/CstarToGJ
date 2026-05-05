@@ -21,8 +21,8 @@
 #include <TSystem.h>
 #include "/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecApplication.h"
 #include <algorithm>
-//#include "correction.h"
-
+#include "correction.h"
+#include <TFormula.h>
 
 // ***** CMS style/label *****
 //{{{
@@ -122,6 +122,9 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     TH1D *h_sig_PESUp  = new TH1D("h_sig_PESUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
     TH1D *h_sig_PESDown= new TH1D("h_sig_PESDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
 
+    TH1D *h_sig_CTagUp   = new TH1D("h_sig_CTagUp","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+
+    TH1D *h_sig_CTagDown = new TH1D("h_sig_CTagDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
 
     //}}}
 
@@ -145,6 +148,8 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     h_sig_JERDown->Sumw2();
     h_sig_JESUp->Sumw2();
     h_sig_JESDown->Sumw2();
+    h_sig_CTagUp->Sumw2();
+    h_sig_CTagDown->Sumw2();
     hPU_MC->Sumw2();
 
     double sum_genWeight = 0.0;
@@ -181,6 +186,88 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     // Main event loop
     // -----------------------------
 
+    // CTagSFEntry CSV loader evaluator
+    //{{{
+    struct CTagSFEntry {
+        std::string wp;
+        std::string sys;
+        int flavor;
+        double etaMin, etaMax;
+        double ptMin, ptMax;
+        std::string formula;
+    };
+
+    std::vector<CTagSFEntry> LoadCTagSFCSV(const std::string &filename){
+        std::vector<CTagSFEntry> entries;
+
+        std::ifstream fin(filename);
+        if (!fin.is_open()) {
+            std::cerr << "Cannot open c-tag SF file: " << filename << std::endl;
+            return entries;
+        }
+
+        std::string line;
+        std::getline(fin, line); // skip header
+
+        while (std::getline(fin, line)) {
+            std::stringstream ss(line);
+            std::string item;
+            std::vector<std::string> cols;
+
+            while (std::getline(ss, item, ',')) {
+                cols.push_back(item);
+            }
+
+            if (cols.size() < 11) continue;
+
+            CTagSFEntry e;
+            e.wp      = cols[0];
+            e.sys     = cols[2];
+            e.flavor  = std::stoi(cols[3]);
+            e.etaMin  = std::stod(cols[4]);
+            e.etaMax  = std::stod(cols[5]);
+            e.ptMin   = std::stod(cols[6]);
+            e.ptMax   = std::stod(cols[7]);
+            e.formula = cols[10];
+
+            entries.push_back(e);
+        }
+
+        return entries;
+    }
+
+    double GetCTagSF(const std::vector<CTagSFEntry> &entries,
+            const std::string &wp,
+            const std::string &sys,
+            int hadronFlavor,
+            double pt,
+            double eta){
+        int flav = 0;
+
+        if (std::abs(hadronFlavor) == 4) flav = 4;      // c jet
+        else if (std::abs(hadronFlavor) == 5) flav = 5; // b jet
+        else flav = 0;                                  // light jet
+
+        double absEta = std::abs(eta);
+
+        for (const auto &e : entries) {
+            if (e.wp != wp) continue;
+            if (e.sys != sys) continue;
+            if (e.flavor != flav) continue;
+
+            if (absEta < e.etaMin || absEta >= e.etaMax) continue;
+            if (pt < e.ptMin || pt >= e.ptMax) continue;
+
+            TFormula f("ctag_sf_formula", e.formula.c_str());
+            return f.Eval(pt);
+        }
+
+        // If outside the SF range, do not change the weight.
+        return 1.0;
+    }
+
+    //}}}
+
     JecConfigReader::ConfigPaths paths;
 
     paths.ak4 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK4.json";
@@ -188,11 +275,11 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
     JecConfigReader::JecConfig cfg(paths);
 
-    //////////////////////////////////////////////////////////////   
     std::ofstream fout("jes_sources.txt");
 
     auto jesUncRefs = cfg.getJesUncSetsMcAK4Ref("2017");
     auto jesTotalRef = jesUncRefs.total.begin()->second;
+
     auto cs = correction::CorrectionSet::from_file(
             "/eos/user/h/hsiaoche/Signal/uncertainty_sources/EGM_ScaleUnc.json.gz"
             );
@@ -210,6 +297,10 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
     JecApplication::SystematicOptions systJERDown;
     systJERDown.jerVar = "down";
+
+    auto ctagSFs = LoadCTagSFCSV(
+            "/eos/user/h/hsiaoche/Signal/uncertainty_sources/ctagging_wp_deepJet.csv"
+            );
 
     Long64_t nbytes = 0, nb = 0;
     for (Long64_t jentry=0; jentry<nentries;jentry++) {
@@ -328,8 +419,6 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
         if (goodPhotonIdx < 0) continue;
 
-        TLorentzVector g_p4;
-        g_p4.SetPtEtaPhiM(Photon_pt[goodPhotonIdx], Photon_eta[goodPhotonIdx], Photon_phi[goodPhotonIdx], Photon_mass[goodPhotonIdx]);
 
         double pho_pt  = Photon_pt[goodPhotonIdx];
         double pho_eta = Photon_eta[goodPhotonIdx];
@@ -341,14 +430,14 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
                 "2017",
                 "scaleup",
                 pho_eta,
-                12.0   // gain (use 12 if not available)
+                12   // gain (use 12 if not available)
                 });
 
         double scaleDown = egmScale->evaluate({
                 "2017",
                 "scaledown",
                 pho_eta,
-                12.0
+                12
                 });
 
         // --- Build photons ---
@@ -369,6 +458,8 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         std::vector<TLorentzVector> goodJetP4s_JERDown;
         std::vector<TLorentzVector> goodJetP4s_JESUp;
         std::vector<TLorentzVector> goodJetP4s_JESDown;
+
+        std::vector<int> goodJetOriginalIdx;
 
         for (UInt_t i= 0; i < nJet; ++i){
 
@@ -505,28 +596,24 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
             j_JESUp.SetPtEtaPhiM(ptJESUp, Jet_eta[i], Jet_phi[i], massJESUp);
             j_JESDown.SetPtEtaPhiM(ptJESDown, Jet_eta[i], Jet_phi[i], massJESDown);
 
-            if (g_p4.DeltaR(j_raw) <= 0.4) continue;
-            if (g_p4.DeltaR(j_nom) <= 0.4) continue;
+            if (g_nom.DeltaR(j_raw) <= 0.4) continue;
+            if (g_nom.DeltaR(j_nom) <= 0.4) continue;
 
             goodJetP4s_nom.push_back(j_nom);
             goodJetP4s_JERUp.push_back(j_JERUp);
             goodJetP4s_JERDown.push_back(j_JERDown);
             goodJetP4s_JESUp.push_back(j_JESUp);
             goodJetP4s_JESDown.push_back(j_JESDown);
+
+            goodJetOriginalIdx.push_back(i);
         }
 
         if (goodJetP4s_nom.size() == 0) continue;
 
         int goodJetVecIdx = GetLeadingJetIndex(goodJetP4s_nom);
+        int selectedJetIdx = goodJetOriginalIdx[goodJetVecIdx];
         if (goodJetVecIdx < 0) continue;
 
-        TLorentzVector reco_g_p4;
-        reco_g_p4.SetPtEtaPhiM(
-                Photon_pt[goodPhotonIdx],
-                Photon_eta[goodPhotonIdx],
-                Photon_phi[goodPhotonIdx],
-                Photon_mass[goodPhotonIdx]
-                );
 
         TLorentzVector reco_j_nom     = goodJetP4s_nom[goodJetVecIdx];
         TLorentzVector reco_j_JERUp   = goodJetP4s_JERUp[goodJetVecIdx];
@@ -535,11 +622,42 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         TLorentzVector reco_j_JESDown = goodJetP4s_JESDown[goodJetVecIdx];
 
 
-        double m_nom     = (reco_g_p4 + reco_j_nom).M();
-        double m_JERUp   = (reco_g_p4 + reco_j_JERUp).M();
-        double m_JERDown = (reco_g_p4 + reco_j_JERDown).M();
-        double m_JESUp   = (reco_g_p4 + reco_j_JESUp).M();
-        double m_JESDown = (reco_g_p4 + reco_j_JESDown).M();
+
+        double ctagSF_nom = GetCTagSF(
+                ctagSFs,
+                "M",
+                "central",
+                Jet_hadronFlavour[selectedJetIdx],
+                reco_j_nom.Pt(),
+                Jet_eta[selectedJetIdx]
+                );
+
+        double ctagSF_up = GetCTagSF(
+                ctagSFs,
+                "M",
+                "up",
+                Jet_hadronFlavour[selectedJetIdx],
+                reco_j_nom.Pt(),
+                Jet_eta[selectedJetIdx]
+                );
+
+        double ctagSF_down = GetCTagSF(
+                ctagSFs,
+                "M",
+                "down",
+                Jet_hadronFlavour[selectedJetIdx],
+                reco_j_nom.Pt(),
+                Jet_eta[selectedJetIdx]
+                );
+
+        double weight_CTag_nom  = weight_central * ctagSF_nom;
+        double weight_CTagUp    = weight_central * ctagSF_up;
+        double weight_CTagDown  = weight_central * ctagSF_down;
+
+        double m_JERUp   = (g_nom + reco_j_JERUp).M();
+        double m_JERDown = (g_nom + reco_j_JERDown).M();
+        double m_JESUp   = (g_nom + reco_j_JESUp).M();
+        double m_JESDown = (g_nom + reco_j_JESDown).M();
         double m_nom     = (g_nom     + reco_j_nom).M();
         double m_PESUp   = (g_PESUp   + reco_j_nom).M();
         double m_PESDown = (g_PESDown + reco_j_nom).M();
@@ -549,19 +667,22 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         hPhoton_pt->Fill(Photon_pt[goodPhotonIdx], weight_central);
         hJet_pt->Fill(reco_j_nom.Pt(), weight_central);
 
-        h_sig->Fill(m_nom, weight_central);
+        h_sig->Fill(m_nom, weight_CTag_nom);
 
-        h_sig_PUUp->Fill(m_nom, weight_PUUp);
-        h_sig_PUDown->Fill(m_nom, weight_PUDown);
+        h_sig_PUUp->Fill(m_nom, weight_PUUp * ctagSF_nom);
+        h_sig_PUDown->Fill(m_nom, weight_PUDown * ctagSF_nom);
 
-        h_sig_JERUp->Fill(m_JERUp, weight_central);
-        h_sig_JERDown->Fill(m_JERDown, weight_central);
+        h_sig_JERUp->Fill(m_JERUp, weight_CTag_nom);
+        h_sig_JERDown->Fill(m_JERDown, weight_CTag_nom);
 
-        h_sig_JESUp->Fill(m_JESUp, weight_central);
-        h_sig_JESDown->Fill(m_JESDown, weight_central);
+        h_sig_JESUp->Fill(m_JESUp, weight_CTag_nom);
+        h_sig_JESDown->Fill(m_JESDown, weight_CTag_nom);
 
-        h_sig_PESUp->Fill(m_PESUp, weight_central);
-        h_sig_PESDown->Fill(m_PESDown, weight_central);
+        h_sig_PESUp->Fill(m_PESUp, weight_CTag_nom);
+        h_sig_PESDown->Fill(m_PESDown, weight_CTag_nom);
+
+        h_sig_CTagUp->Fill(m_nom, weight_CTagUp);
+        h_sig_CTagDown->Fill(m_nom, weight_CTagDown);
 
     }//jentry
 
@@ -670,7 +791,22 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     CMS_label(0.18, 0.87);
     c15->SaveAs("Invariant_Mass_PES_down.png");
 
+    TCanvas *c16 = new TCanvas("c16", "Invariant Mass Reco CTag Up", 600, 400);
+    h_sig_CTagUp->Draw("HIST");
+    h_sig_CTagUp->GetXaxis()->SetTitleOffset(1.4);
+    h_sig_CTagUp->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c16->SaveAs("Invariant_Mass_CTag_up.png");
 
+    TCanvas *c17 = new TCanvas("c17", "Invariant Mass Reco CTag Down", 600, 400);
+    h_sig_CTagDown->Draw("HIST");
+    h_sig_CTagDown->GetXaxis()->SetTitleOffset(1.4);
+    h_sig_CTagDown->GetXaxis()->SetLabelOffset(0.02);
+    CMS_label(0.18, 0.87);
+    c17->SaveAs("Invariant_Mass_CTag_down.png");
+
+    //PU JER JES C-tag comparison plots
+    //{{{
 
     TCanvas *c20 = new TCanvas("c10", "PU comparison", 600, 400);
 
@@ -699,7 +835,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     leg->SetBorderSize(0);
     leg->Draw();
 
-    c20->SaveAs("Invariant_Mass_reco_selected_PU_compare.png");
+    c20->SaveAs("Invariant_Mass_PU_compare.png");
 
     //===============
     //PU comparison
@@ -860,7 +996,31 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     CMS_label(0.18,0.87);
     cJES->SaveAs("Invariant_Mass_JES_compare.png");
 
+    // =====================
+    // JC-tag comparison
+    // =====================
+    TCanvas *cCTag = new TCanvas("cCTag", "CTag comparison", 600, 400);
 
+    h_sig_CTagDown->SetLineColor(kBlue);
+    h_sig->SetLineColor(kBlack);
+    h_sig_CTagUp->SetLineColor(kRed);
+
+    h_sig_CTagDown->Draw("HIST");
+    h_sig->Draw("HIST SAME");
+    h_sig_CTagUp->Draw("HIST SAME");
+
+    TLegend *legCTag = new TLegend(0.62,0.52,0.88,0.68);
+    legCTag->AddEntry(h_sig,"Nominal","l");
+    legCTag->AddEntry(h_sig_CTagUp,"CTag Up","l");
+    legCTag->AddEntry(h_sig_CTagDown,"CTag Down","l");
+    legCTag->SetBorderSize(0);
+    legCTag->Draw();
+
+    CMS_label(0.18,0.87);
+    cCTag->SaveAs("Invariant_Mass_CTag_compare.png");
+
+    //}}}
+    
     TFile *fOut = new TFile("CstarToGJ.root", "RECREATE");
     h_M_cstar->Write();
     hM_gen->Write();
@@ -876,6 +1036,8 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     h_sig_JESDown->Write("sig_JESDown");
     h_sig_PESUp->Write("sig_PESUp");
     h_sig_PESDown->Write("sig_PESDown");
+    h_sig_CTagUp->Write("sig_CTagUp");
+    h_sig_CTagDown->Write("sig_CTagDown");
     fOut->Close();
     delete fOut;
 
