@@ -541,33 +541,30 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         TLorentzVector reco_j_JESUp   = goodJetP4s_JESUp[goodJetVecIdx];
         TLorentzVector reco_j_JESDown = goodJetP4s_JESDown[goodJetVecIdx];
 
-        double ctagSF_nom = ctagSF_corr->evaluate({
-                std::string("central"),
-                std::string("fixedWP"),
-                std::string("M"),
-                (int)Jet_hadronFlavour[selectedJetIdx],
-                std::abs(Jet_eta[selectedJetIdx]),
-                reco_j_nom.Pt()
-                });
 
-        double ctagSF_up = ctagSF_corr->evaluate({
-                std::string("up"),
-                std::string("fixedWP"),
-                std::string("M"),
-                (int)Jet_hadronFlavour[selectedJetIdx],
-                std::abs(Jet_eta[selectedJetIdx]),
-                reco_j_nom.Pt()
-                });
+        double ctagSF_nom = 1.0, ctagSF_up = 1.0, ctagSF_down = 1.0;
+        int hadFlav = (int)Jet_hadronFlavour[selectedJetIdx];
+        if (hadFlav == 4) {
+            ctagSF_nom = ctagSF_corr->evaluate({
+                    std::string("central"), std::string("wcharm"), std::string("M"),
+                    4, std::abs(Jet_eta[selectedJetIdx]), reco_j_nom.Pt()
+                    });
+            ctagSF_up = ctagSF_corr->evaluate({
+                    std::string("up"), std::string("wcharm"), std::string("M"),
+                    4, std::abs(Jet_eta[selectedJetIdx]), reco_j_nom.Pt()
+                    });
+            ctagSF_down = ctagSF_corr->evaluate({
+                    std::string("down"), std::string("wcharm"), std::string("M"),
+                    4, std::abs(Jet_eta[selectedJetIdx]), reco_j_nom.Pt()
+                    });
+        }
 
-        double ctagSF_down = ctagSF_corr->evaluate({
-                std::string("down"),
-                std::string("fixedWP"),
-                std::string("M"),
-                (int)Jet_hadronFlavour[selectedJetIdx],
-                std::abs(Jet_eta[selectedJetIdx]),
-                reco_j_nom.Pt()
-                });
-
+        // temporary debug — remove after confirming
+        if (jentry < 50 && hadFlav != 4) {
+            std::cout << "Event " << jentry
+                << " | non-c-jet slipped through! hadFlav=" << hadFlav
+                << " | SF set to 1.0" << std::endl;
+        }
 
         // ---- ADD THIS ----
         if (jentry < 50) {
