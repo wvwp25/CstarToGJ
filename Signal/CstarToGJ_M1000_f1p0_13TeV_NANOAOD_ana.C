@@ -91,88 +91,6 @@ double deltaR(double eta1, double phi1, double eta2, double phi2)
     return std::sqrt(deta*deta + dphi*dphi);
 }
 
-// CTagSFEntry CSV loader evaluator
-    //{{{
-    struct CTagSFEntry {
-        std::string wp;
-        std::string sys;
-        int flavor;
-        double etaMin, etaMax;
-        double ptMin, ptMax;
-        std::string formula;
-    };
-
-    std::vector<CTagSFEntry> LoadCTagSFCSV(const std::string &filename){
-        std::vector<CTagSFEntry> entries;
-
-        std::ifstream fin(filename);
-        if (!fin.is_open()) {
-            std::cerr << "Cannot open c-tag SF file: " << filename << std::endl;
-            return entries;
-        }
-
-        std::string line;
-        std::getline(fin, line); // skip header
-
-        while (std::getline(fin, line)) {
-            std::stringstream ss(line);
-            std::string item;
-            std::vector<std::string> cols;
-
-            while (std::getline(ss, item, ',')) {
-                cols.push_back(item);
-            }
-
-            if (cols.size() < 11) continue;
-
-            CTagSFEntry e;
-            e.wp      = cols[0];
-            e.sys     = cols[2];
-            e.flavor  = std::stoi(cols[3]);
-            e.etaMin  = std::stod(cols[4]);
-            e.etaMax  = std::stod(cols[5]);
-            e.ptMin   = std::stod(cols[6]);
-            e.ptMax   = std::stod(cols[7]);
-            e.formula = cols[10];
-
-            entries.push_back(e);
-        }
-
-        return entries;
-    }
-
-    double GetCTagSF(const std::vector<CTagSFEntry> &entries,
-            const std::string &wp,
-            const std::string &sys,
-            int hadronFlavor,
-            double pt,
-            double eta){
-        int flav = 0;
-
-        if (std::abs(hadronFlavor) == 4) flav = 4;      // c jet
-        else if (std::abs(hadronFlavor) == 5) flav = 5; // b jet
-        else flav = 0;                                  // light jet
-
-        double absEta = std::abs(eta);
-
-        for (const auto &e : entries) {
-            if (e.wp != wp) continue;
-            if (e.sys != sys) continue;
-            if (e.flavor != flav) continue;
-
-            if (absEta < e.etaMin || absEta >= e.etaMax) continue;
-            if (pt < e.ptMin || pt >= e.ptMax) continue;
-
-            TFormula f("ctag_sf_formula", e.formula.c_str());
-            return f.Eval(pt);
-        }
-
-        // If outside the SF range, do not change the weight.
-        return 1.0;
-    }
-
-    //}}}
-
 
 void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 {
@@ -269,7 +187,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     // Main event loop
     // -----------------------------
 
-        JecConfigReader::ConfigPaths paths;
+    JecConfigReader::ConfigPaths paths;
 
     paths.ak4 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK4.json";
     paths.ak8 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK8.json";
@@ -299,9 +217,10 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     JecApplication::SystematicOptions systJERDown;
     systJERDown.jerVar = "down";
 
-    auto ctagSFs = LoadCTagSFCSV(
-            "/eos/user/h/hsiaoche/Signal/uncertainty_sources/ctagging_wp_deepJet.csv"
+    auto cs_ctag = correction::CorrectionSet::from_file(
+            "/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run2-2017-UL-NanoAODv9/latest/ctagging.json.gz"
             );
+    auto ctagSF_corr = cs_ctag->at("deepJet_wp");
 
     Long64_t nbytes = 0, nb = 0;
     for (Long64_t jentry=0; jentry<nentries;jentry++) {
@@ -622,34 +541,46 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
         TLorentzVector reco_j_JESUp   = goodJetP4s_JESUp[goodJetVecIdx];
         TLorentzVector reco_j_JESDown = goodJetP4s_JESDown[goodJetVecIdx];
 
+        double ctagSF_nom = ctagSF_corr->evaluate({
+                std::string("central"),
+                std::string("fixedWP"),
+                std::string("M"),
+                (int)Jet_hadronFlavour[selectedJetIdx],
+                std::abs(Jet_eta[selectedJetIdx]),
+                reco_j_nom.Pt()
+                });
+
+        double ctagSF_up = ctagSF_corr->evaluate({
+                std::string("up"),
+                std::string("fixedWP"),
+                std::string("M"),
+                (int)Jet_hadronFlavour[selectedJetIdx],
+                std::abs(Jet_eta[selectedJetIdx]),
+                reco_j_nom.Pt()
+                });
+
+        double ctagSF_down = ctagSF_corr->evaluate({
+                std::string("down"),
+                std::string("fixedWP"),
+                std::string("M"),
+                (int)Jet_hadronFlavour[selectedJetIdx],
+                std::abs(Jet_eta[selectedJetIdx]),
+                reco_j_nom.Pt()
+                });
 
 
-        double ctagSF_nom = GetCTagSF(
-                ctagSFs,
-                "M",
-                "central",
-                Jet_hadronFlavour[selectedJetIdx],
-                reco_j_nom.Pt(),
-                Jet_eta[selectedJetIdx]
-                );
-
-        double ctagSF_up = GetCTagSF(
-                ctagSFs,
-                "M",
-                "up",
-                Jet_hadronFlavour[selectedJetIdx],
-                reco_j_nom.Pt(),
-                Jet_eta[selectedJetIdx]
-                );
-
-        double ctagSF_down = GetCTagSF(
-                ctagSFs,
-                "M",
-                "down",
-                Jet_hadronFlavour[selectedJetIdx],
-                reco_j_nom.Pt(),
-                Jet_eta[selectedJetIdx]
-                );
+        // ---- ADD THIS ----
+        if (jentry < 50) {
+            std::cout << "Event " << jentry
+                << " | hadronFlavour=" << Jet_hadronFlavour[selectedJetIdx]
+                << " | pt="            << reco_j_nom.Pt()
+                << " | eta="           << Jet_eta[selectedJetIdx]
+                << " | SF_nom="        << ctagSF_nom
+                << " | SF_up="         << ctagSF_up
+                << " | SF_down="       << ctagSF_down
+                << std::endl;
+        }
+        // ------------------
 
         double weight_CTag_nom  = weight_central * ctagSF_nom;
         double weight_CTagUp    = weight_central * ctagSF_up;
@@ -689,61 +620,62 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
     SetCMSStyle();
 
-//{{{
+    //weighted_yield_summary
+    //{{{
 
     // =============================
-// Weighted yield summary output
-// =============================
-std::ofstream yieldOut("weighted_yield_summary.txt");
+    // Weighted yield summary output
+    // =============================
+    std::ofstream yieldOut("weighted_yield_summary.txt");
 
-if (!yieldOut.is_open()) {
-    std::cerr << "ERROR: cannot open weighted_yield_summary.txt" << std::endl;
-} else {
+    if (!yieldOut.is_open()) {
+        std::cerr << "ERROR: cannot open weighted_yield_summary.txt" << std::endl;
+    } else {
 
-    double y_nom    = h_sig->Integral();
-    double y_PUUp   = h_sig_PUUp->Integral();
-    double y_PUDown = h_sig_PUDown->Integral();
+        double y_nom    = h_sig->Integral();
+        double y_PUUp   = h_sig_PUUp->Integral();
+        double y_PUDown = h_sig_PUDown->Integral();
 
-    double y_CTagUp   = h_sig_CTagUp->Integral();
-    double y_CTagDown = h_sig_CTagDown->Integral();
+        double y_CTagUp   = h_sig_CTagUp->Integral();
+        double y_CTagDown = h_sig_CTagDown->Integral();
 
-    yieldOut << "===== PU weighted yield check =====\n\n";
+        yieldOut << "===== PU weighted yield check =====\n\n";
 
-    yieldOut << "Nominal integral = " << y_nom << "\n";
-    yieldOut << "PUUp integral    = " << y_PUUp << "\n";
-    yieldOut << "PUDown integral  = " << y_PUDown << "\n\n";
+        yieldOut << "Nominal integral = " << y_nom << "\n";
+        yieldOut << "PUUp integral    = " << y_PUUp << "\n";
+        yieldOut << "PUDown integral  = " << y_PUDown << "\n\n";
 
-    yieldOut << "PUUp / Nominal   = " << y_PUUp / y_nom << "\n";
-    yieldOut << "PUDown / Nominal = " << y_PUDown / y_nom << "\n\n";
+        yieldOut << "PUUp / Nominal   = " << y_PUUp / y_nom << "\n";
+        yieldOut << "PUDown / Nominal = " << y_PUDown / y_nom << "\n\n";
 
-    yieldOut << "PUUp change (%)   = "
-             << 100.0 * (y_PUUp / y_nom - 1.0) << " %\n";
+        yieldOut << "PUUp change (%)   = "
+            << 100.0 * (y_PUUp / y_nom - 1.0) << " %\n";
 
-    yieldOut << "PUDown change (%) = "
-             << 100.0 * (y_PUDown / y_nom - 1.0) << " %\n\n";
+        yieldOut << "PUDown change (%) = "
+            << 100.0 * (y_PUDown / y_nom - 1.0) << " %\n\n";
 
 
-    yieldOut << "===== CTag weighted yield check =====\n\n";
+        yieldOut << "===== CTag weighted yield check =====\n\n";
 
-    yieldOut << "Nominal integral  = " << y_nom << "\n";
-    yieldOut << "CTagUp integral   = " << y_CTagUp << "\n";
-    yieldOut << "CTagDown integral = " << y_CTagDown << "\n\n";
+        yieldOut << "Nominal integral  = " << y_nom << "\n";
+        yieldOut << "CTagUp integral   = " << y_CTagUp << "\n";
+        yieldOut << "CTagDown integral = " << y_CTagDown << "\n\n";
 
-    yieldOut << "CTagUp / Nominal   = " << y_CTagUp / y_nom << "\n";
-    yieldOut << "CTagDown / Nominal = " << y_CTagDown / y_nom << "\n\n";
+        yieldOut << "CTagUp / Nominal   = " << y_CTagUp / y_nom << "\n";
+        yieldOut << "CTagDown / Nominal = " << y_CTagDown / y_nom << "\n\n";
 
-    yieldOut << "CTagUp change (%)   = "
-             << 100.0 * (y_CTagUp / y_nom - 1.0) << " %\n";
+        yieldOut << "CTagUp change (%)   = "
+            << 100.0 * (y_CTagUp / y_nom - 1.0) << " %\n";
 
-    yieldOut << "CTagDown change (%) = "
-             << 100.0 * (y_CTagDown / y_nom - 1.0) << " %\n";
+        yieldOut << "CTagDown change (%) = "
+            << 100.0 * (y_CTagDown / y_nom - 1.0) << " %\n";
 
-    yieldOut.close();
+        yieldOut.close();
 
-    std::cout << "Saved weighted yield summary to weighted_yield_summary.txt" << std::endl;
-}
+        std::cout << "Saved weighted yield summary to weighted_yield_summary.txt" << std::endl;
+    }
 
-//}}}
+    //}}}
 
     gROOT->SetBatch(kTRUE); // run without opening any windows
 
@@ -1082,7 +1014,7 @@ if (!yieldOut.is_open()) {
     cCTag->SaveAs("Invariant_Mass_CTag_compare.png");
 
     //}}}
-    
+
     TFile *fOut = new TFile("CstarToGJ.root", "RECREATE");
     h_M_cstar->Write();
     hM_gen->Write();
