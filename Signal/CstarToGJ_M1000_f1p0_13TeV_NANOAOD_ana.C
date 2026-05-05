@@ -91,6 +91,89 @@ double deltaR(double eta1, double phi1, double eta2, double phi2)
     return std::sqrt(deta*deta + dphi*dphi);
 }
 
+// CTagSFEntry CSV loader evaluator
+    //{{{
+    struct CTagSFEntry {
+        std::string wp;
+        std::string sys;
+        int flavor;
+        double etaMin, etaMax;
+        double ptMin, ptMax;
+        std::string formula;
+    };
+
+    std::vector<CTagSFEntry> LoadCTagSFCSV(const std::string &filename){
+        std::vector<CTagSFEntry> entries;
+
+        std::ifstream fin(filename);
+        if (!fin.is_open()) {
+            std::cerr << "Cannot open c-tag SF file: " << filename << std::endl;
+            return entries;
+        }
+
+        std::string line;
+        std::getline(fin, line); // skip header
+
+        while (std::getline(fin, line)) {
+            std::stringstream ss(line);
+            std::string item;
+            std::vector<std::string> cols;
+
+            while (std::getline(ss, item, ',')) {
+                cols.push_back(item);
+            }
+
+            if (cols.size() < 11) continue;
+
+            CTagSFEntry e;
+            e.wp      = cols[0];
+            e.sys     = cols[2];
+            e.flavor  = std::stoi(cols[3]);
+            e.etaMin  = std::stod(cols[4]);
+            e.etaMax  = std::stod(cols[5]);
+            e.ptMin   = std::stod(cols[6]);
+            e.ptMax   = std::stod(cols[7]);
+            e.formula = cols[10];
+
+            entries.push_back(e);
+        }
+
+        return entries;
+    }
+
+    double GetCTagSF(const std::vector<CTagSFEntry> &entries,
+            const std::string &wp,
+            const std::string &sys,
+            int hadronFlavor,
+            double pt,
+            double eta){
+        int flav = 0;
+
+        if (std::abs(hadronFlavor) == 4) flav = 4;      // c jet
+        else if (std::abs(hadronFlavor) == 5) flav = 5; // b jet
+        else flav = 0;                                  // light jet
+
+        double absEta = std::abs(eta);
+
+        for (const auto &e : entries) {
+            if (e.wp != wp) continue;
+            if (e.sys != sys) continue;
+            if (e.flavor != flav) continue;
+
+            if (absEta < e.etaMin || absEta >= e.etaMax) continue;
+            if (pt < e.ptMin || pt >= e.ptMax) continue;
+
+            TFormula f("ctag_sf_formula", e.formula.c_str());
+            return f.Eval(pt);
+        }
+
+        // If outside the SF range, do not change the weight.
+        return 1.0;
+    }
+
+    //}}}
+
+
 void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 {
 
@@ -186,89 +269,7 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     // Main event loop
     // -----------------------------
 
-    // CTagSFEntry CSV loader evaluator
-    //{{{
-    struct CTagSFEntry {
-        std::string wp;
-        std::string sys;
-        int flavor;
-        double etaMin, etaMax;
-        double ptMin, ptMax;
-        std::string formula;
-    };
-
-    std::vector<CTagSFEntry> LoadCTagSFCSV(const std::string &filename){
-        std::vector<CTagSFEntry> entries;
-
-        std::ifstream fin(filename);
-        if (!fin.is_open()) {
-            std::cerr << "Cannot open c-tag SF file: " << filename << std::endl;
-            return entries;
-        }
-
-        std::string line;
-        std::getline(fin, line); // skip header
-
-        while (std::getline(fin, line)) {
-            std::stringstream ss(line);
-            std::string item;
-            std::vector<std::string> cols;
-
-            while (std::getline(ss, item, ',')) {
-                cols.push_back(item);
-            }
-
-            if (cols.size() < 11) continue;
-
-            CTagSFEntry e;
-            e.wp      = cols[0];
-            e.sys     = cols[2];
-            e.flavor  = std::stoi(cols[3]);
-            e.etaMin  = std::stod(cols[4]);
-            e.etaMax  = std::stod(cols[5]);
-            e.ptMin   = std::stod(cols[6]);
-            e.ptMax   = std::stod(cols[7]);
-            e.formula = cols[10];
-
-            entries.push_back(e);
-        }
-
-        return entries;
-    }
-
-    double GetCTagSF(const std::vector<CTagSFEntry> &entries,
-            const std::string &wp,
-            const std::string &sys,
-            int hadronFlavor,
-            double pt,
-            double eta){
-        int flav = 0;
-
-        if (std::abs(hadronFlavor) == 4) flav = 4;      // c jet
-        else if (std::abs(hadronFlavor) == 5) flav = 5; // b jet
-        else flav = 0;                                  // light jet
-
-        double absEta = std::abs(eta);
-
-        for (const auto &e : entries) {
-            if (e.wp != wp) continue;
-            if (e.sys != sys) continue;
-            if (e.flavor != flav) continue;
-
-            if (absEta < e.etaMin || absEta >= e.etaMax) continue;
-            if (pt < e.ptMin || pt >= e.ptMax) continue;
-
-            TFormula f("ctag_sf_formula", e.formula.c_str());
-            return f.Eval(pt);
-        }
-
-        // If outside the SF range, do not change the weight.
-        return 1.0;
-    }
-
-    //}}}
-
-    JecConfigReader::ConfigPaths paths;
+        JecConfigReader::ConfigPaths paths;
 
     paths.ak4 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK4.json";
     paths.ak8 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK8.json";
