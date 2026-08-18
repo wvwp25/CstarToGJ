@@ -99,9 +99,9 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
 
     //Histograms
     //{{{
-    TH1F *hM_gen   = new TH1F("hM_gen",   "GEN M(#gamma + jet);M^{GEN}_{#gamma j} (GeV);Events",   500, 0., 3000.);
-    TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events", 100, 500, 3000);
-    TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000.);
+    TH1F *hM_gen   = new TH1F("hM_gen",   "GEN M(#gamma + jet);M^{GEN}_{#gamma j} (GeV);Events",   500, 0.,  3500.);
+    TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events", 100, 500,  3500);
+    TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
 
     TH1F *hPhoton_pt = new TH1F("hPhoton_pT", "Photon p_{T};p_{T}^{photon} (GeV);Events", 500, 0., 1500.);
     TH1F *hJet_pt = new TH1F("hJet_pT", "Jet p_{T};p_{T}^{jet} (GeV);Events", 500, 0., 1500.);
@@ -109,28 +109,28 @@ void CstarToGJ_M1000_f1p0_13TeV_NANOAOD_ana::Loop()
     // -----------------------------
     // Central + nuisance histograms
     // -----------------------------
-    TH1D *h_sig        = new TH1D("h_sig",        "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
-    TH1D *h_sig_PUUp   = new TH1D("h_sig_PUUp",   "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
-    TH1D *h_sig_PUDown = new TH1D("h_sig_PUDown", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
-    TH1D *h_sig_JERUp  = new TH1D("h_sig_JERUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
-    TH1D *h_sig_JERDown= new TH1D("h_sig_JERDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
-    TH1D *h_sig_JESUp  = new TH1D("h_sig_JESUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
-    TH1D *h_sig_JESDown= new TH1D("h_sig_JESDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+    TH1D *h_sig        = new TH1D("h_sig",        "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_PUUp   = new TH1D("h_sig_PUUp",   "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_PUDown = new TH1D("h_sig_PUDown", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_JERUp  = new TH1D("h_sig_JERUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_JERDown= new TH1D("h_sig_JERDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_JESUp  = new TH1D("h_sig_JESUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_JESDown= new TH1D("h_sig_JESDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
     TH1D *hPU_MC = new TH1D("hPU_MC", "MC PU;True interactions;Events", 100, 0, 100);
 
-    TH1D *h_sig_PERUp  = new TH1D("h_sig_PERUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
-    TH1D *h_sig_PERDown= new TH1D("h_sig_PERDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
-    TH1D *h_sig_PESUp  = new TH1D("h_sig_PESUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
-    TH1D *h_sig_PESDown= new TH1D("h_sig_PESDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+    TH1D *h_sig_PERUp  = new TH1D("h_sig_PERUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_PERDown= new TH1D("h_sig_PERDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_PESUp  = new TH1D("h_sig_PESUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_PESDown= new TH1D("h_sig_PESDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
 
-    TH1D *h_sig_CTagUp   = new TH1D("h_sig_CTagUp","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+    TH1D *h_sig_CTagUp   = new TH1D("h_sig_CTagUp","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
 
-    TH1D *h_sig_CTagDown = new TH1D("h_sig_CTagDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0., 3000);
+    TH1D *h_sig_CTagDown = new TH1D("h_sig_CTagDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
 
     //}}}
 
 
-    TFile *fPU = TFile::Open("DataPileupHistograms.root");
+    TFile *fPU = TFile::Open("/eos/user/h/hsiaoche/Signal/uncertainty_sources/DataPileupHistograms.root");
     TH1D *hPU_nom_data  = (TH1D*)fPU->Get("pu_nominal");
     TH1D *hPU_up_data   = (TH1D*)fPU->Get("pu_up");
     TH1D *hPU_down_data = (TH1D*)fPU->Get("pu_down");
