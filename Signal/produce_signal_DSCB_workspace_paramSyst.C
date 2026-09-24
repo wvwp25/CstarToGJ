@@ -1,4 +1,5 @@
 #include "RooCrystalBall.h"
+#include "TLatex.h"
 #include "RooDataHist.h"
 #include "RooFit.h"
 #include "RooFitResult.h"
@@ -84,7 +85,7 @@ void saveFitPlot(RooRealVar &x,
                    Form("DSCB Fit %s", spec.label), 800, 600);
 
     RooPlot *frame = x.frame(Range("fitRange"), Bins(60),
-                             Title(Form("DSCB fit: %s", spec.label)));
+                             Title(Form("%s", spec.label)));
     data.plotOn(frame, Name("data"),
                 DataError(RooAbsData::SumW2),
                 MarkerStyle(20),
@@ -109,8 +110,6 @@ void saveFitPlot(RooRealVar &x,
     TLegend legend(0.60, 0.76, 0.88, 0.88);
     legend.SetBorderSize(0);
     legend.SetFillStyle(0);
-    legend.AddEntry(frame->findObject("data"), "Signal (MC)", "lep");
-    legend.AddEntry(frame->findObject("dscb"), "DSCB fit", "l");
     legend.Draw();
 
     TPaveText text(0.60, 0.43, 0.88, 0.74, "NDC");
@@ -129,6 +128,15 @@ void saveFitPlot(RooRealVar &x,
     text.Draw();
 
     const std::string plotName = std::string("DSCB_fit_paramSyst_") + spec.histName + ".png";
+        {
+            gPad->Update();
+            if (auto *statsBox = gPad->GetPrimitive("stats")) statsBox->Delete();
+            TLatex privateWorkLabel;
+            privateWorkLabel.SetNDC();
+            privateWorkLabel.SetTextFont(52);
+            privateWorkLabel.SetTextSize(0.035);
+            privateWorkLabel.DrawLatex(0.14, 0.88, "Private work (CMS simulation)");
+        }
     canvas.SaveAs(plotName.c_str());
     delete frame;
 }
