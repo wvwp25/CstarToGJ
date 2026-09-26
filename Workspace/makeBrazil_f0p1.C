@@ -150,9 +150,12 @@ void makeBrazil_f0p1(){
     leg->AddEntry(grT,"Excited quark (f=0.1)","l");
     leg->Draw();
 
-    TLatex lat; lat.SetNDC(true); lat.SetTextFont(42); lat.SetTextSize(0.035);
-    lat.DrawLatex(0.12,0.93,"");
-    lat.DrawLatex(0.75,0.93,"41.8 fb^{-1} (13 TeV)");
+    TLatex lat; lat.SetNDC(true); lat.SetTextFont(52); lat.SetTextSize(0.035);
+    lat.DrawLatex(0.12,0.93,"Private work (CMS simulation)");
+    lat.SetTextFont(42);
+    lat.SetTextAlign(31);
+    lat.DrawLatex(0.95,0.93,"41.8 fb^{-1} (13 TeV)");
+    lat.SetTextAlign(11);
     lat.DrawLatex(0.80,0.81,"c* #rightarrow c#gamma");
 
     c->SaveAs((workDir + "/brazil_sigmaB_f0p1.png").c_str());
