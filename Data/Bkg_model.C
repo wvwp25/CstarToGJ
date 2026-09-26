@@ -7,10 +7,13 @@
 #include "TF1.h"
 #include "TFitResult.h"
 #include "TFitResultPtr.h"
+#include "TGraphErrors.h"
 #include "TH1.h"
+#include "TLegend.h"
 #include "TLine.h"
 #include "TMath.h"
 #include "TParameter.h"
+#include "TPad.h"
 #include "TPaveText.h"
 #include "TLatex.h"
 #include "TROOT.h"
@@ -59,19 +62,16 @@ bool inSidebands(double mass, double fitMin, double fitMax) {
          !(mass > excludedLow && mass < excludedHigh);
 }
 
-void drawCmsLabel(double luminosityFb) {
+void drawPrivateLabel(double luminosityFb) {
   TLatex label;
   label.SetNDC();
-  label.SetTextFont(62);
-  label.SetTextSize(0.045);
-  label.DrawLatex(0.13, 0.90, "CMS");
   label.SetTextFont(52);
   label.SetTextSize(0.035);
-  label.DrawLatex(0.23, 0.90, "Preliminary");
+  label.DrawLatex(0.14, 0.91, "Private work (CMS simulation)");
   label.SetTextFont(42);
   label.SetTextAlign(31);
   label.SetTextSize(0.035);
-  label.DrawLatex(0.94, 0.90,
+  label.DrawLatex(0.94, 0.91,
                   Form("%.1f fb^{-1} (13 TeV)", luminosityFb));
 }
 
@@ -240,6 +240,48 @@ void Bkg_model(int signalMass = 1000,
     }
   }
 
+  // Figure 59 uses roughly 50 visible points across the full mass range.  The
+  // source histogram has 4 GeV bins, so combine 20 bins (80 GeV) for display
+  // only.  Dividing by the group size keeps the original events-per-4-GeV
+  // convention and therefore the normalization of backgroundFit unchanged.
+  constexpr int displayRebin = 20;
+  TH1 *displayData = dynamic_cast<TH1 *>(data->Clone("hM_display"));
+  displayData->SetDirectory(nullptr);
+  displayData->Rebin(displayRebin);
+  displayData->Scale(1.0 / displayRebin);
+  for (int bin = 1; bin <= displayData->GetNbinsX(); ++bin) {
+    const double lowEdge = displayData->GetXaxis()->GetBinLowEdge(bin);
+    const double highEdge = displayData->GetXaxis()->GetBinUpEdge(bin);
+    if (highEdge > excludedLow && lowEdge < excludedHigh) {
+      displayData->SetBinContent(bin, 0.0);
+      displayData->SetBinError(bin, 0.0);
+    }
+  }
+
+  // Fractional residual used in the lower panel: (Data - Fit) / Fit.  Use a
+  // graph so bins outside the fit range and inside the excluded signal window
+  // are genuinely absent rather than drawn as artificial zeroes.
+  TGraphErrors residual;
+  residual.SetName("fractionalResidual");
+  int residualPoint = 0;
+  for (int bin = 1; bin <= displayData->GetNbinsX(); ++bin) {
+    const double mass = displayData->GetBinCenter(bin);
+    const double lowEdge = displayData->GetXaxis()->GetBinLowEdge(bin);
+    const double highEdge = displayData->GetXaxis()->GetBinUpEdge(bin);
+    if (mass < fitMin || mass > fitMax ||
+        (highEdge > excludedLow && lowEdge < excludedHigh)) continue;
+
+    const double prediction =
+        backgroundFit.Integral(lowEdge, highEdge) / (highEdge - lowEdge);
+    if (prediction <= 0.0) continue;
+
+    const double value = displayData->GetBinContent(bin);
+    const double uncertainty = displayData->GetBinError(bin);
+    residual.SetPoint(residualPoint, mass, (value - prediction) / prediction);
+    residual.SetPointError(residualPoint, 0.0, uncertainty / prediction);
+    ++residualPoint;
+  }
+
   std::cout << "=== Simultaneous two-sideband background fit ===\n"
             << "Fit status: " << result->Status() << "\n"
             << "Covariance quality: " << result->CovMatrixStatus() << "\n"
@@ -259,43 +301,96 @@ void Bkg_model(int signalMass = 1000,
 
   gStyle->SetOptStat(0);
   gROOT->SetBatch(kTRUE);
-  TCanvas canvas("cSimultaneousNoPullSidebandsOnly", "Simultaneous sideband fit", 700, 650);
-  canvas.SetLogy();
-  canvas.SetLeftMargin(0.12);
-  canvas.SetRightMargin(0.05);
-  canvas.SetTopMargin(0.11);
-  canvas.SetBottomMargin(0.12);
+  TCanvas canvas("cSimultaneousSidebands", "Simultaneous sideband fit", 700, 700);
+  TPad topPad("topPad", "data and fit", 0.0, 0.30, 1.0, 1.0);
+  TPad residualPad("residualPad", "fractional residual", 0.0, 0.0, 1.0, 0.30);
+  topPad.SetLeftMargin(0.12);
+  topPad.SetRightMargin(0.05);
+  topPad.SetTopMargin(0.11);
+  topPad.SetBottomMargin(0.025);
+  topPad.SetLogy();
+  residualPad.SetLeftMargin(0.12);
+  residualPad.SetRightMargin(0.05);
+  residualPad.SetTopMargin(0.03);
+  residualPad.SetBottomMargin(0.32);
+  topPad.Draw();
+  residualPad.Draw();
+
+  topPad.cd();
   // Draw an explicit frame because the input histogram currently ends at
   // 3 TeV; SetRangeUser cannot extend a histogram beyond its native axis.
   // The frame lets every fit curve be shown through 4 TeV.
   const double yMinimum = 0.3;
-  const double yMaximum = std::max(10.0, 1.8 * sidebandData->GetMaximum());
-  TH1 *frame = canvas.DrawFrame(fitMin, yMinimum, plotMax, yMaximum);
+  const double yMaximum = std::max(10.0, 1.8 * displayData->GetMaximum());
+  TH1 *frame = topPad.DrawFrame(fitMin, yMinimum, plotMax, yMaximum);
   frame->SetTitle("");
-  frame->GetXaxis()->SetTitle("m_{#gamma+jet} [GeV]");
   frame->GetYaxis()->SetTitle("Events");
-  sidebandData->Draw("E SAME");
+  frame->GetXaxis()->SetLabelSize(0.0);
+  displayData->SetMarkerStyle(20);
+  displayData->SetMarkerSize(0.75);
+  displayData->SetMarkerColor(kBlack);
+  displayData->SetLineColor(kBlack);
+  displayData->Draw("E1 SAME");
   backgroundFit.SetLineColor(kRed + 1);
   backgroundFit.SetLineWidth(2);
   backgroundFit.Draw("SAME");
 
-  canvas.Update();
-  TLine lowLine(excludedLow, canvas.GetUymin(), excludedLow, canvas.GetUymax());
-  TLine highLine(excludedHigh, canvas.GetUymin(), excludedHigh, canvas.GetUymax());
+  topPad.Update();
+  TLine lowLine(excludedLow, yMinimum, excludedLow, yMaximum);
+  TLine highLine(excludedHigh, yMinimum, excludedHigh, yMaximum);
   lowLine.SetLineStyle(2);
   highLine.SetLineStyle(2);
   lowLine.Draw();
   highLine.Draw();
-  canvas.cd();
-  drawCmsLabel(luminosityFb);
+  drawPrivateLabel(luminosityFb);
 
-  TPaveText fitLabel(0.57, 0.67, 0.88, 0.82, "NDC");
+  TLegend legend(0.63, 0.68, 0.89, 0.84);
+  legend.SetBorderSize(0);
+  legend.SetFillStyle(0);
+  legend.SetTextSize(0.035);
+  legend.AddEntry(displayData, "Data (sidebands)", "lep");
+  legend.AddEntry(&backgroundFit, "4-parameter fit", "l");
+  legend.AddEntry(&lowLine, "Excluded signal window", "l");
+  legend.Draw();
+
+  TPaveText fitLabel(0.63, 0.58, 0.89, 0.67, "NDC");
   fitLabel.SetBorderSize(0);
   fitLabel.SetFillStyle(0);
-  fitLabel.SetTextSize(0.022);
-  //fitLabel.AddText("Simultaneous sideband fit");
+  fitLabel.SetTextSize(0.03);
   fitLabel.AddText(Form("#chi^{2}/ndf = %.2f", chi2 / ndf));
   fitLabel.Draw();
+
+  residualPad.cd();
+  TH1 *residualFrame = residualPad.DrawFrame(fitMin, -2.0, plotMax, 2.0);
+  residualFrame->SetTitle("");
+  residualFrame->GetXaxis()->SetTitle("m_{#gamma+jet} [GeV]");
+  residualFrame->GetYaxis()->SetTitle("(Data-Fit)/Fit");
+  residualFrame->GetXaxis()->SetTitleSize(0.12);
+  residualFrame->GetXaxis()->SetLabelSize(0.10);
+  residualFrame->GetXaxis()->SetTitleOffset(1.05);
+  residualFrame->GetYaxis()->SetTitleSize(0.10);
+  residualFrame->GetYaxis()->SetLabelSize(0.08);
+  residualFrame->GetYaxis()->SetTitleOffset(0.48);
+  residualFrame->GetYaxis()->SetNdivisions(505);
+
+  residual.SetMarkerStyle(20);
+  residual.SetMarkerSize(0.65);
+  residual.SetMarkerColor(kBlack);
+  residual.SetLineColor(kBlack);
+  residual.Draw("P SAME");
+
+  TLine zeroLine(fitMin, 0.0, plotMax, 0.0);
+  zeroLine.SetLineColor(kRed + 1);
+  zeroLine.SetLineWidth(2);
+  zeroLine.Draw();
+  TLine residualLowLine(excludedLow, -2.0, excludedLow, 2.0);
+  TLine residualHighLine(excludedHigh, -2.0, excludedHigh, 2.0);
+  residualLowLine.SetLineStyle(2);
+  residualHighLine.SetLineStyle(2);
+  residualLowLine.Draw();
+  residualHighLine.Draw();
+
+  canvas.cd();
   canvas.Modified();
   canvas.Update();
 
@@ -310,6 +405,7 @@ void Bkg_model(int signalMass = 1000,
   sidebandData->Write("hM_sidebands");
   backgroundFit.Write("bkgFit");
   pull->Write("hPull");
+  residual.Write("fractionalResidual");
   result->Write("fitResult");
   TParameter<double>("fit_min", fitMin).Write();
   TParameter<double>("fit_max", fitMax).Write();
@@ -326,6 +422,7 @@ void Bkg_model(int signalMass = 1000,
   output.Close();
 
   delete pull;
+  delete displayData;
   delete sidebandData;
   delete data;
 }
