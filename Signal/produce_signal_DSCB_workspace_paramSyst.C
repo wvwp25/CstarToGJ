@@ -12,12 +12,12 @@
 #include "TFile.h"
 #include "TCanvas.h"
 #include "TAxis.h"
-#include "TLegend.h"
 #include "TPaveText.h"
 #include "TH1.h"
 #include "TROOT.h"
 #include "TSystem.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <map>
@@ -86,6 +86,7 @@ void saveFitPlot(RooRealVar &x,
                  RooRealVar &nL,
                  RooRealVar &alphaR,
                  RooRealVar &nR,
+                 int signalMass,
                  const TString &outputDirectory)
 {
     TCanvas canvas((std::string("c_fit_") + spec.histName).c_str(),
@@ -109,20 +110,21 @@ void saveFitPlot(RooRealVar &x,
 
     frame->GetXaxis()->SetTitle("m_{#gamma j} [GeV]");
     frame->GetYaxis()->SetTitle("Events");
-    frame->GetXaxis()->SetRangeUser(xminFit, xmaxFit);
+    // Keep the tested mass at the horizontal center, as in Figure 67 of the
+    // analysis note.  Use the largest symmetric interval contained in the fit
+    // range so no extrapolated region is shown.
+    const double displayHalfWidth =
+        std::min(signalMass - xminFit, xmaxFit - signalMass);
+    frame->GetXaxis()->SetRangeUser(signalMass - displayHalfWidth,
+                                    signalMass + displayHalfWidth);
     frame->SetMinimum(0.0);
     frame->Draw();
 
     const double chi2 = frame->chiSquare("dscb", "data", 7);
 
-    TLegend legend(0.60, 0.76, 0.88, 0.88);
-    legend.SetBorderSize(0);
-    legend.SetFillStyle(0);
-    legend.Draw();
-
-    TPaveText text(0.60, 0.43, 0.88, 0.74, "NDC");
+    TPaveText text(0.15, 0.48, 0.45, 0.81, "NDC");
     text.SetBorderSize(0);
-    text.SetFillColor(0);
+    text.SetFillStyle(0);
     text.SetTextAlign(12);
     text.SetTextSize(0.03);
     text.AddText(Form("Mean = %.1f #pm %.1f", mean.getVal(), mean.getError()));
@@ -134,6 +136,14 @@ void saveFitPlot(RooRealVar &x,
     text.AddText(Form("n_{R} = %.2f #pm %.2f", nR.getVal(), nR.getError()));
     text.AddText(Form("#chi^{2}/N_{dof} = %.4f", chi2));
     text.Draw();
+
+    TLatex massLabel;
+    massLabel.SetNDC();
+    massLabel.SetTextFont(42);
+    massLabel.SetTextAlign(31);
+    massLabel.SetTextSize(0.04);
+    massLabel.DrawLatex(0.88, 0.82,
+                        Form("c* = %.1f TeV", signalMass / 1000.0));
 
     const TString plotName = gSystem->ConcatFileName(
         outputDirectory,
@@ -156,6 +166,7 @@ FitParams fitTemplate(TFile &inputFile,
                       const TemplateSpec &spec,
                       double xminFit,
                       double xmaxFit,
+                      int signalMass,
                       const TString &outputDirectory)
 {
     FitParams result;
@@ -208,6 +219,7 @@ FitParams fitTemplate(TFile &inputFile,
 
     saveFitPlot(x, data, dscb, spec, xminFit, xmaxFit,
                 mean, sigmaL, sigmaR, alphaL, nL, alphaR, nR,
+                signalMass,
                 outputDirectory);
 
     delete fitResult;
@@ -254,14 +266,16 @@ void produce_signal_DSCB_workspace_paramSyst(
     double xMin = 500.0,
     double xMax = 1400.0,
     double xminFit = 500.0,
-    double xmaxFit = 1400.0)
+    double xmaxFit = 1400.0,
+    int signalMass = 1000)
 {
     gROOT->SetBatch(kTRUE);
 
     const TString outputDirectory = gSystem->DirName(outputName);
     gSystem->mkdir(outputDirectory, true);
 
-    if (xMin >= xMax || xminFit >= xmaxFit || xminFit < xMin || xmaxFit > xMax) {
+    if (xMin >= xMax || xminFit >= xmaxFit || xminFit < xMin || xmaxFit > xMax ||
+        signalMass <= xminFit || signalMass >= xmaxFit) {
         std::cerr << "ERROR: invalid observable or fit range" << std::endl;
         return;
     }
@@ -289,7 +303,7 @@ void produce_signal_DSCB_workspace_paramSyst(
     bool allOk = true;
     for (const TemplateSpec &spec : templates) {
         FitParams fit = fitTemplate(
-            inputFile, x, spec, xminFit, xmaxFit, outputDirectory);
+            inputFile, x, spec, xminFit, xmaxFit, signalMass, outputDirectory);
         params[spec.histName] = fit;
         allOk = allOk && (fit.status == 0) && (fit.yield > 0.0);
     }

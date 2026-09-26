@@ -131,4 +131,4 @@ cd /eos/user/h/hsiaoche/CMSSW_13_3_0
 eval "$(scram runtime -sh)"
 
 root -l -b -q \
-    "$script_dir/produce_signal_DSCB_workspace_paramSyst.C(\"$input_file\",\"$output_file\",$x_min,$x_max,$fit_min,$fit_max)"
+    "$script_dir/produce_signal_DSCB_workspace_paramSyst.C(\"$input_file\",\"$output_file\",$x_min,$x_max,$fit_min,$fit_max,$mass)"
