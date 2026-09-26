@@ -45,6 +45,7 @@ Lim readLim(const std::string& fn){
 
 void makeBrazil_f0p1(){
     gStyle->SetOptStat(0);
+    const std::string workDir = "/eos/user/h/hsiaoche/workspace";
 
     std::vector<double> mGeV = {1000,1200,1400,1600,1800,2000,2200,2400,2600,2800,3000};
 
@@ -74,7 +75,7 @@ void makeBrazil_f0p1(){
 
     for(int i=0;i<N;i++){
         int m = (int)mGeV[i];
-        std::string fn = Form("higgsCombine_f0p1.AsymptoticLimits.mH%d.root", m);
+        std::string fn = Form("%s/higgsCombine_f0p1.AsymptoticLimits.mH%d.root", workDir.c_str(), m);
         Lim L = readLim(fn);
 
         double norm = sigma_pb[i];
@@ -154,5 +155,5 @@ void makeBrazil_f0p1(){
     lat.DrawLatex(0.75,0.93,"41.8 fb^{-1} (13 TeV)");
     lat.DrawLatex(0.80,0.81,"c* #rightarrow c#gamma");
 
-    c->SaveAs("brazil_sigmaB_f0p1.png");
+    c->SaveAs((workDir + "/brazil_sigmaB_f0p1.png").c_str());
 }

@@ -9,7 +9,8 @@ Usage:
 Options:
   --card PATH            Single datacard/workspace to process. If omitted, use datacard_M*_${coupling}.txt
   -f, --coupling VALUE   Coupling to process: f1p0, f0p5, f0p1. Default: f1p0
-  -w, --work-dir PATH    Directory with datacards/workspaces. Default: current directory
+  -w, --work-dir PATH    Directory for generated workspaces/results.
+                         Default: /eos/user/h/hsiaoche/workspace
   -c, --cmssw-dir PATH   CMSSW directory used for cmsenv. Default: /eos/user/h/hsiaoche/CMSSW_13_3_0
   --mass-list LIST       Space/comma separated masses, e.g. "1000 1200" or 1000,1200
   --expected             Run expected Asimov significance with -t -1 --expectSignal VALUE
@@ -34,7 +35,9 @@ USAGE
 
 card=""
 coupling="f1p0"
-work_dir="$(pwd)"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+card_dir="$script_dir"
+work_dir="/eos/user/h/hsiaoche/workspace"
 cmssw_dir="/eos/user/h/hsiaoche/CMSSW_13_3_0"
 mass_list=""
 expected=0
@@ -150,7 +153,10 @@ elif [ -n "$mass_list" ]; then
     inputs+=("datacard_M${mass}_${coupling}.txt")
   done
 else
-  inputs=(datacard_M*_${coupling}.txt)
+  shopt -s nullglob
+  # shellcheck disable=SC2206
+  inputs=("$card_dir"/datacard_M*_"$coupling".txt)
+  shopt -u nullglob
 fi
 
 status=0
@@ -177,11 +183,11 @@ mass_from_input() {
   case "$base" in
     datacard_M*_${coupling}.txt)
       base="${base#datacard_M}"
-      printf '%s\n' "${base%_${coupling}.txt}"
+      printf '%s\n' "${base%_"${coupling}".txt}"
       ;;
     workspace_M*_${coupling}.root)
       base="${base#workspace_M}"
-      printf '%s\n' "${base%_${coupling}.root}"
+      printf '%s\n' "${base%_"${coupling}".root}"
       ;;
     *)
       printf '125\n'
@@ -201,6 +207,9 @@ label_from_input() {
 }
 
 for input in "${inputs[@]}"; do
+  if [[ "$input" != /* && -f "$card_dir/$input" ]]; then
+    input="$card_dir/$input"
+  fi
   if [ ! -f "$input" ]; then
     echo "SKIP missing input: $input"
     skipped=$((skipped + 1))

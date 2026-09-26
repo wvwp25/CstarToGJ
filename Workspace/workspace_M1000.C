@@ -12,13 +12,13 @@ void workspace_M1000() {
     // ----------------------------
     // Input files
     // ----------------------------
-    TFile f_sig("/eos/user/h/hsiaoche/Signal/CstarToGJ_M1000_f1p0_13TeV_NANOAOD/signal_DSCB_workspace.root");
+    TFile f_sig("/eos/user/h/hsiaoche/Signal/CstarToGJ_M1000_f1p0_13TeV_NANOAOD/signal_DSCB_workspace_paramSyst.root");
     RooWorkspace* w_sig = (RooWorkspace*)f_sig.Get("ws");
 
-    TFile f_bkg("/eos/user/h/hsiaoche/Data/bkg_workspace_M1000.root");
+    TFile f_bkg("/eos/user/h/hsiaoche/Data/bkg_workspace_M1000_f1p0.root");
     RooWorkspace* w_bkg = (RooWorkspace*)f_bkg.Get("ws");
 
-    TFile f_data("/eos/user/h/hsiaoche/Data/Run2017BCDEF_BG_ana_M1000.root");
+    TFile f_data("/eos/user/h/hsiaoche/Data/Run2017BCDEF_BG_M1000.root");
     TH1F* hM = (TH1F*)f_data.Get("hM");
 
     // ----------------------------
@@ -61,4 +61,3 @@ void workspace_M1000() {
 
     std::cout << "Combined workspace written: Cstar_GammaJet_M1000.root\n";
 }
-

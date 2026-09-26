@@ -8,7 +8,8 @@ Usage:
 
 Options:
   -f, --coupling VALUE   Coupling to process: f1p0, f0p5, f0p1, f*, or all. Default: all
-  -w, --work-dir PATH    Directory with workspace ROOT files. Default: current directory
+  -w, --work-dir PATH    Directory with generated workspace ROOT files.
+                         Default: /eos/user/h/hsiaoche/workspace
   -c, --cmssw-dir PATH   CMSSW directory used for cmsenv. Default: /eos/user/h/hsiaoche/CMSSW_13_3_0
   --mass-list LIST       Space/comma separated masses, e.g. "1000 1200" or 1000,1200
   --parallel N           Number of parallel jobs for --doFits. Default: 8
@@ -67,7 +68,7 @@ USAGE
 }
 
 coupling="all"
-work_dir="$(pwd)"
+work_dir="/eos/user/h/hsiaoche/workspace"
 cmssw_dir="/eos/user/h/hsiaoche/CMSSW_13_3_0"
 mass_list=""
 parallel_jobs=8

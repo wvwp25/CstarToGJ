@@ -8,7 +8,8 @@ Usage:
 
 Options:
   -f, --coupling VALUE   Coupling to process: f1p0, f0p5, f0p1. Default: f1p0
-  -w, --work-dir PATH    Directory with datacards/workspaces. Default: current directory
+  -w, --work-dir PATH    Directory for generated workspaces/results.
+                         Default: /eos/user/h/hsiaoche/workspace
   -c, --cmssw-dir PATH   CMSSW directory used for cmsenv. Default: /eos/user/h/hsiaoche/CMSSW_13_3_0
   --mass-list LIST       Space/comma separated masses, e.g. "1000 1200" or 1000,1200
   --skip-existing        Do not rerun text2workspace.py if the workspace ROOT file already exists
@@ -36,7 +37,9 @@ USAGE
 }
 
 coupling="f1p0"
-work_dir="$(pwd)"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+card_dir="$script_dir"
+work_dir="/eos/user/h/hsiaoche/workspace"
 cmssw_dir="/eos/user/h/hsiaoche/CMSSW_13_3_0"
 mass_list=""
 dry_run=0
@@ -132,6 +135,7 @@ if [ "$dry_run" -eq 0 ]; then
 fi
 
 cd "$work_dir" || exit 1
+work_dir="$(pwd -P)"
 
 cards=()
 if [ -n "$mass_list" ]; then
@@ -140,7 +144,10 @@ if [ -n "$mass_list" ]; then
     cards+=("datacard_M${mass}_${coupling}.txt")
   done
 else
-  cards=(datacard_M*_${coupling}.txt)
+  shopt -s nullglob
+  # shellcheck disable=SC2206
+  cards=("$card_dir"/datacard_M*_"$coupling".txt)
+  shopt -u nullglob
 fi
 
 status=0
@@ -150,14 +157,19 @@ skipped=0
 failed=0
 
 for card in "${cards[@]}"; do
+  case "$card" in
+    /*) ;;
+    *) card="$card_dir/$card" ;;
+  esac
   if [ ! -f "$card" ]; then
     echo "SKIP missing datacard: $card"
     skipped=$((skipped + 1))
     continue
   fi
 
-  mass="${card#datacard_M}"
-  mass="${mass%_${coupling}.txt}"
+  card_name="$(basename "$card")"
+  mass="${card_name#datacard_M}"
+  mass="${mass%_"${coupling}".txt}"
   ws="workspace_M${mass}_${coupling}.root"
   name="_${coupling}"
 

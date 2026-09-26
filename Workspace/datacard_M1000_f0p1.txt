@@ -3,9 +3,9 @@ jmax 1
 kmax *
 
 ---------------------------------
-shapes data_obs bin1 /eos/home-h/hsiaoche/Data/bkg_workspace_M1000_f1p0.root ws:data_obs
+shapes data_obs bin1 /eos/user/h/hsiaoche/Data/bkg_workspace_M1000_f1p0.root ws:data_obs
 shapes sig      bin1 /eos/user/h/hsiaoche/Signal/CstarToGJ_M1000_f0p1_13TeV_NANOAOD/signal_DSCB_workspace_paramSyst.root ws:dscb
-shapes bkg      bin1 /eos/home-h/hsiaoche/Data/bkg_workspace_M1000_f1p0.root ws:bkg
+shapes bkg      bin1 /eos/user/h/hsiaoche/Data/bkg_workspace_M1000_f1p0.root ws:bkg
 ---------------------------------
 
 bin         bin1

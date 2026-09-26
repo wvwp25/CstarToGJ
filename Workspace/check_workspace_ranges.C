@@ -1,6 +1,8 @@
 #include <iostream>
 
-void check_workspace_ranges(const char* filename = "workspace_M1000_f1p0.root") {
+void check_workspace_ranges(
+    const char* filename =
+        "/eos/user/h/hsiaoche/workspace/workspace_M1000_f1p0.root") {
   gSystem->Load("libHiggsAnalysisCombinedLimit");
 
   TFile f(filename);
