@@ -14,6 +14,7 @@ usage() {
     echo "Usage:"
     echo "  $0 -make"
     echo "  $0 -m MASS"
+    echo "  $0 -m all"
     echo "  $0 -workspace [MASS]"
     echo "  $0 -all"
     echo
@@ -21,6 +22,8 @@ usage() {
     echo "  -make              Create Run2017BCDEF_BG.root from the combined NanoAOD."
     echo "  -m MASS            Fit one mass and build its background workspace."
     echo "                     MASS may be written as 1000 or M1000."
+    echo "  -m all             Fit every mass and build all background workspaces"
+    echo "                     without recreating the common data histogram."
     echo "  -workspace [MASS]  Build workspace(s) from existing mass-fit files."
     echo "  -all               Recreate the histogram, fit every mass, and build all"
     echo "                     background workspaces."
@@ -120,8 +123,12 @@ case "$1" in
         ;;
     -m)
         (( $# == 2 )) || { usage >&2; exit 2; }
-        mode="mass"
-        requested_mass="$(normalize_mass "$2")"
+        if [[ "$2" == "all" ]]; then
+            mode="all_masses"
+        else
+            mode="mass"
+            requested_mass="$(normalize_mass "$2")"
+        fi
         ;;
     -workspace)
         (( $# <= 2 )) || { usage >&2; exit 2; }
@@ -155,6 +162,12 @@ case "$mode" in
     mass)
         fit_mass "$requested_mass"
         build_workspaces "$requested_mass"
+        ;;
+    all_masses)
+        for mass in "${masses[@]}"; do
+            fit_mass "$mass"
+        done
+        build_workspaces 0
         ;;
     workspace)
         build_workspaces "$requested_mass"

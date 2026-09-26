@@ -67,7 +67,7 @@ void drawPrivateLabel(double luminosityFb) {
   label.SetNDC();
   label.SetTextFont(52);
   label.SetTextSize(0.035);
-  label.DrawLatex(0.14, 0.91, "Private work (CMS simulation)");
+  label.DrawLatex(0.14, 0.91, "Private work (CMS data)");
   label.SetTextFont(42);
   label.SetTextAlign(31);
   label.SetTextSize(0.035);
@@ -80,6 +80,18 @@ void drawPrivateLabel(double luminosityFb) {
 void Bkg_model(int signalMass = 1000,
                             double fitMin = 700.0,
                             double fitMax = 3500.0) {
+  // A zero mass is the all-mass mode.  Reuse the common data histogram and
+  // run the same independent sideband fit for every tested hypothesis.
+  if (signalMass == 0) {
+    const int testedMasses[] = {1000, 1200, 1400, 1600, 1800, 2000,
+                                2200, 2400, 2600, 2800, 3000};
+    for (const int mass : testedMasses) {
+      std::cout << "\n===== Background fit for M" << mass << " =====\n";
+      Bkg_model(mass, fitMin, fitMax);
+    }
+    return;
+  }
+
   const double luminosityFb = 41.8;  // Keep current input convention.
   // Use one consistent 4 TeV display range for every mass hypothesis.  This
   // changes only the displayed/extrapolated range; the fit remains limited by
@@ -258,9 +270,9 @@ void Bkg_model(int signalMass = 1000,
     }
   }
 
-  // Fractional residual used in the lower panel: (Data - Fit) / Fit.  Use a
-  // graph so bins outside the fit range and inside the excluded signal window
-  // are genuinely absent rather than drawn as artificial zeroes.
+  // Fractional residual used in the lower panel: (Data - Fit) / Fit.  Use
+  // a graph so bins outside the fit range and inside the excluded signal
+  // window are genuinely absent rather than drawn as artificial zeroes.
   TGraphErrors residual;
   residual.SetName("fractionalResidual");
   int residualPoint = 0;
