@@ -16,6 +16,7 @@
 #include "TROOT.h"
 #include "TStyle.h"
 #include "Math/MinimizerOptions.h"
+#include "RooAbsReal.h"
 #include "RooRealVar.h"
 #include "RooWorkspace.h"
 
@@ -87,23 +88,44 @@ void Bkg_model(int signalMass = 1000,
 
   const TString signalFileName = Form(
       "/eos/user/h/hsiaoche/Signal/"
-      "CstarToGJ_M%d_f1p0_13TeV_NANOAOD/signal_DSCB_workspace.root",
+      "CstarToGJ_M%d_f1p0_13TeV_NANOAOD/"
+      "signal_DSCB_workspace_paramSyst.root",
       signalMass);
   TFile signalFile(signalFileName, "READ");
   RooWorkspace *signalWorkspace =
       dynamic_cast<RooWorkspace *>(signalFile.Get("ws"));
-  if (signalFile.IsZombie() || !signalWorkspace ||
-      !signalWorkspace->var("x0") || !signalWorkspace->var("sigmaL") ||
-      !signalWorkspace->var("sigmaR")) {
+  if (signalFile.IsZombie() || !signalWorkspace) {
     Error("Bkg_model",
-          "Cannot read x0, sigmaL, and sigmaR from %s",
+          "Cannot read workspace ws from %s",
           signalFileName.Data());
     return;
   }
 
-  const double windowCenter = signalWorkspace->var("x0")->getVal();
-  const double sigmaLeft = signalWorkspace->var("sigmaL")->getVal();
-  const double sigmaRight = signalWorkspace->var("sigmaR")->getVal();
+  // Define the nominal signal window with all shape-systematic nuisance
+  // parameters fixed at their central values.
+  for (const char *thetaName : {"theta_JES", "theta_JER", "theta_PES"}) {
+    RooRealVar *theta = signalWorkspace->var(thetaName);
+    if (!theta) {
+      Error("Bkg_model", "Cannot read %s from %s", thetaName,
+            signalFileName.Data());
+      return;
+    }
+    theta->setVal(0.0);
+  }
+
+  RooAbsReal *x0Syst = signalWorkspace->function("x0_syst");
+  RooAbsReal *sigmaLSyst = signalWorkspace->function("sigmaL_syst");
+  RooAbsReal *sigmaRSyst = signalWorkspace->function("sigmaR_syst");
+  if (!x0Syst || !sigmaLSyst || !sigmaRSyst) {
+    Error("Bkg_model",
+          "Cannot read x0_syst, sigmaL_syst, and sigmaR_syst from %s",
+          signalFileName.Data());
+    return;
+  }
+
+  const double windowCenter = x0Syst->getVal();
+  const double sigmaLeft = sigmaLSyst->getVal();
+  const double sigmaRight = sigmaRSyst->getVal();
   signalFile.Close();
 
   excludedLow = windowCenter - 3.0 * sigmaLeft;

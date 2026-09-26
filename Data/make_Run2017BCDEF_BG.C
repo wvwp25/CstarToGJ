@@ -59,8 +59,6 @@ void make_Run2017BCDEF_BG(
     if (localEntry < 0) break;
     if (data.GetEntry(entry) <= 0) continue;
 
-    // The dataset is selected with the single-photon trigger used by the
-    // offline photon pT threshold below.
     if (!data.HLT_Photon200) continue;
     ++passedTrigger;
 
