@@ -28,6 +28,11 @@ using namespace RooFit;
 
 namespace {
 
+// Use coarse binning only when drawing the fitted templates.  This matches the
+// approximately 25 points used in Figure 67 of AN2019_267_v10 and keeps the
+// markers readable.  The DSCB fit itself still uses the original RooDataHist.
+constexpr int kPlotBins = 25;
+
 struct TemplateSpec {
     const char *histName;
     const char *label;
@@ -86,9 +91,10 @@ void saveFitPlot(RooRealVar &x,
     TCanvas canvas((std::string("c_fit_") + spec.histName).c_str(),
                    Form("DSCB Fit %s", spec.label), 800, 600);
 
-    RooPlot *frame = x.frame(Range("fitRange"), Bins(60),
+    RooPlot *frame = x.frame(Range("fitRange"), Bins(kPlotBins),
                              Title(Form("%s", spec.label)));
     data.plotOn(frame, Name("data"),
+                Binning(kPlotBins),
                 DataError(RooAbsData::SumW2),
                 MarkerStyle(20),
                 MarkerSize(0.8),
