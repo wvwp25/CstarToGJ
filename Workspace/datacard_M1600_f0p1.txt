@@ -1,0 +1,32 @@
+imax 1
+jmax 1
+kmax *
+
+---------------------------------
+shapes data_obs bin1 /eos/home-h/hsiaoche/Data/bkg_workspace_M1600_f1p0.root ws:data_obs
+shapes sig      bin1 /eos/user/h/hsiaoche/Signal/CstarToGJ_M1600_f0p1_13TeV_NANOAOD/signal_DSCB_workspace_paramSyst.root ws:dscb
+shapes bkg      bin1 /eos/home-h/hsiaoche/Data/bkg_workspace_M1600_f1p0.root ws:bkg
+---------------------------------
+
+bin         bin1
+observation -1
+
+---------------------------------
+bin             bin1      bin1
+process         sig       bkg
+process         0         1
+rate            5.846033618  37962
+
+lumi_13TeV      lnN       1.023              -
+CMS_highPtPhotonEff lnN       1.10               -
+CMS_ctag        lnN       0.8363459054/1.163654095   -
+CMS_pileup      lnN       0.9998605328/1.000601394   -
+
+theta_JES       param     0  1
+theta_JER       param     0  1
+theta_PES       param     0  1
+
+P1              flatParam
+P2              flatParam
+P3              flatParam
+bkg_norm        rateParam bin1 bkg 1 [0,5]
