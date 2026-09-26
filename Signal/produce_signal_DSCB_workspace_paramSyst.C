@@ -16,6 +16,7 @@
 #include "TPaveText.h"
 #include "TH1.h"
 #include "TROOT.h"
+#include "TSystem.h"
 
 #include <cmath>
 #include <iostream>
@@ -79,7 +80,8 @@ void saveFitPlot(RooRealVar &x,
                  RooRealVar &alphaL,
                  RooRealVar &nL,
                  RooRealVar &alphaR,
-                 RooRealVar &nR)
+                 RooRealVar &nR,
+                 const TString &outputDirectory)
 {
     TCanvas canvas((std::string("c_fit_") + spec.histName).c_str(),
                    Form("DSCB Fit %s", spec.label), 800, 600);
@@ -127,7 +129,9 @@ void saveFitPlot(RooRealVar &x,
     text.AddText(Form("#chi^{2}/N_{dof} = %.4f", chi2));
     text.Draw();
 
-    const std::string plotName = std::string("DSCB_fit_paramSyst_") + spec.histName + ".png";
+    const TString plotName = gSystem->ConcatFileName(
+        outputDirectory,
+        (std::string("DSCB_fit_paramSyst_") + spec.histName + ".png").c_str());
         {
             gPad->Update();
             if (auto *statsBox = gPad->GetPrimitive("stats")) statsBox->Delete();
@@ -135,9 +139,9 @@ void saveFitPlot(RooRealVar &x,
             privateWorkLabel.SetNDC();
             privateWorkLabel.SetTextFont(52);
             privateWorkLabel.SetTextSize(0.035);
-            privateWorkLabel.DrawLatex(0.14, 0.88, "Private work (CMS simulation)");
+            privateWorkLabel.DrawLatex(0.14, 0.86, "Private work (CMS simulation)");
         }
-    canvas.SaveAs(plotName.c_str());
+    canvas.SaveAs(plotName);
     delete frame;
 }
 
@@ -145,7 +149,8 @@ FitParams fitTemplate(TFile &inputFile,
                       RooRealVar &x,
                       const TemplateSpec &spec,
                       double xminFit,
-                      double xmaxFit)
+                      double xmaxFit,
+                      const TString &outputDirectory)
 {
     FitParams result;
 
@@ -196,7 +201,8 @@ FitParams fitTemplate(TFile &inputFile,
     result.nR = nR.getVal();
 
     saveFitPlot(x, data, dscb, spec, xminFit, xmaxFit,
-                mean, sigmaL, sigmaR, alphaL, nL, alphaR, nR);
+                mean, sigmaL, sigmaR, alphaL, nL, alphaR, nR,
+                outputDirectory);
 
     delete fitResult;
 
@@ -236,16 +242,23 @@ RooFormulaVar makeSystParam(const char *name,
 
 } // namespace
 
-void produce_signal_DSCB_workspace_paramSyst()
+void produce_signal_DSCB_workspace_paramSyst(
+    const char *inputName = "CstarToGJ.root",
+    const char *outputName = "signal_DSCB_workspace_paramSyst.root",
+    double xMin = 500.0,
+    double xMax = 1400.0,
+    double xminFit = 500.0,
+    double xmaxFit = 1400.0)
 {
     gROOT->SetBatch(kTRUE);
 
-    const char *inputName = "CstarToGJ.root";
-    const char *outputName = "signal_DSCB_workspace_paramSyst.root";
-    const double xMin = 500.0;
-    const double xMax = 1400.0;
-    const double xminFit = 500.0;
-    const double xmaxFit = 1400.0;
+    const TString outputDirectory = gSystem->DirName(outputName);
+    gSystem->mkdir(outputDirectory, true);
+
+    if (xMin >= xMax || xminFit >= xmaxFit || xminFit < xMin || xmaxFit > xMax) {
+        std::cerr << "ERROR: invalid observable or fit range" << std::endl;
+        return;
+    }
 
     TFile inputFile(inputName, "READ");
     if (inputFile.IsZombie()) {
@@ -269,7 +282,8 @@ void produce_signal_DSCB_workspace_paramSyst()
     std::map<std::string, FitParams> params;
     bool allOk = true;
     for (const TemplateSpec &spec : templates) {
-        FitParams fit = fitTemplate(inputFile, x, spec, xminFit, xmaxFit);
+        FitParams fit = fitTemplate(
+            inputFile, x, spec, xminFit, xmaxFit, outputDirectory);
         params[spec.histName] = fit;
         allOk = allOk && (fit.status == 0) && (fit.yield > 0.0);
     }

@@ -1,5 +1,5 @@
-#define CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana_cxx
-#include "CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana.h"
+#define CstarToGJAnalysis_cxx
+#include "CstarToGJ_analysis.h"
 #include <TH2.h>
 #include <TStyle.h>
 #include <TCanvas.h>
@@ -62,7 +62,6 @@ void CMS_label(double x = 0.08, double y = 0.88,
 //}}}
 
 double lumi_pb = 41800.0;
-double xsec = 1.291e-02;
 
 // --------------------------------------------------
 // Helper: pick leading jet in a vector of p4
@@ -89,10 +88,19 @@ double deltaR(double eta1, double phi1, double eta2, double phi2)
 }
 
 
-void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
+void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
 {
 
     if (fChain == 0) return;
+    const double xsec = crossSectionPb;
+    const TString artifactDirectory = gSystem->DirName(outputFile);
+    gSystem->mkdir(artifactDirectory, true);
+    const auto artifactPath = [&artifactDirectory](const char *fileName) {
+        TString path(artifactDirectory);
+        if (!path.EndsWith("/")) path += "/";
+        path += fileName;
+        return path;
+    };
 
     //Histograms
     //{{{
@@ -192,7 +200,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
 
     JecConfigReader::JecConfig cfg(paths);
 
-    std::ofstream fout("jes_sources.txt");
+    std::ofstream fout(artifactPath("jes_sources.txt").Data());
 
     auto jesUncRefs = cfg.getJesUncSetsMcAK4Ref("2017");
     auto jesTotalRef = jesUncRefs.total.begin()->second;
@@ -634,7 +642,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     // =============================
     // Weighted yield summary output
     // =============================
-    std::ofstream yieldOut("weighted_yield_summary.txt");
+    std::ofstream yieldOut(artifactPath("weighted_yield_summary.txt").Data());
 
     if (!yieldOut.is_open()) {
         std::cerr << "ERROR: cannot open weighted_yield_summary.txt" << std::endl;
@@ -693,7 +701,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     hM_gen->GetXaxis()->SetTitleOffset(1.4);
     hM_gen->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c1->SaveAs("Invariant_Mass_gen.png");
+    c1->SaveAs(artifactPath("Invariant_Mass_gen.png"));
 
 
     TCanvas *c3 = new TCanvas("c3", "Mass of C*", 600, 400);
@@ -701,7 +709,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     h_M_cstar->GetXaxis()->SetTitleOffset(1.4);    // lower x-title
     h_M_cstar->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c3->SaveAs("Mass_Cstar.png");
+    c3->SaveAs(artifactPath("Mass_Cstar.png"));
 
 
     TCanvas *c4 = new TCanvas("c4", "Photon_pT", 600, 400);
@@ -709,7 +717,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     hPhoton_pt->GetXaxis()->SetTitleOffset(1.4);    // lower x-title
     hPhoton_pt->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c4->SaveAs("Photon_pT.png");
+    c4->SaveAs(artifactPath("Photon_pT.png"));
 
 
     TCanvas *c5 = new TCanvas("c5", "Jet_pT", 600, 400);
@@ -717,21 +725,21 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     hJet_pt->GetXaxis()->SetTitleOffset(1.4);    // lower x-title
     hJet_pt->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c5->SaveAs("Jet_pT.png");
+    c5->SaveAs(artifactPath("Jet_pT.png"));
 
     TCanvas *c6 = new TCanvas("c6", "Invariant Mass Reco", 600, 400);
     hM_reco_selected->Draw("HIST");
     hM_reco_selected->GetXaxis()->SetTitleOffset(1.4);    // lower x-title
     hM_reco_selected->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c6->SaveAs("Invariant_Mass_reco_selected.png");
+    c6->SaveAs(artifactPath("Invariant_Mass_reco_selected.png"));
 
     TCanvas *c7 = new TCanvas("c7", "Invariant Mass Reco PU Nom", 600, 400);
     h_sig->Draw("HIST");
     h_sig->GetXaxis()->SetTitleOffset(1.4);
     h_sig->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c7->SaveAs("Invariant_Mass_PU_nom.png");
+    c7->SaveAs(artifactPath("Invariant_Mass_PU_nom.png"));
 
     TCanvas *c8 = new TCanvas("c8", "Invariant Mass Reco PU Up", 600, 400);
     h_sig_PUUp->Draw("HIST");
@@ -739,7 +747,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     h_sig_PUUp->GetXaxis()->SetLabelOffset(0.02);
     h_sig_PUUp->SetStats(0);
     CMS_label(0.18, 0.87);
-    c8->SaveAs("Invariant_Mass_PU_up.png");
+    c8->SaveAs(artifactPath("Invariant_Mass_PU_up.png"));
 
     TCanvas *c9 = new TCanvas("c9", "Invariant Mass Reco PU Down", 600, 400);
     h_sig_PUDown->Draw("HIST");
@@ -747,49 +755,49 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     h_sig_PUDown->GetXaxis()->SetLabelOffset(0.02);
     h_sig_PUDown->SetStats(0);
     CMS_label(0.18, 0.87);
-    c9->SaveAs("Invariant_Mass_PU_down.png");
+    c9->SaveAs(artifactPath("Invariant_Mass_PU_down.png"));
 
     TCanvas *c10 = new TCanvas("c8", "Invariant Mass Reco JES Up", 600, 400);
     h_sig_JESUp->Draw("HIST");
     h_sig_JESUp->GetXaxis()->SetTitleOffset(1.4);
     h_sig_JESUp->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c10->SaveAs("Invariant_Mass_JES_up.png");
+    c10->SaveAs(artifactPath("Invariant_Mass_JES_up.png"));
 
     TCanvas *c11 = new TCanvas("c9", "Invariant Mass Reco JES Down", 600, 400);
     h_sig_JESDown->Draw("HIST");
     h_sig_JESDown->GetXaxis()->SetTitleOffset(1.4);
     h_sig_JESDown->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c11->SaveAs("Invariant_Mass_JES_down.png");
+    c11->SaveAs(artifactPath("Invariant_Mass_JES_down.png"));
 
     TCanvas *c12 = new TCanvas("c8", "Invariant Mass Reco JER Up", 600, 400);
     h_sig_JERUp->Draw("HIST");
     h_sig_JERUp->GetXaxis()->SetTitleOffset(1.4);
     h_sig_JERUp->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c12->SaveAs("Invariant_Mass_JER_up.png");
+    c12->SaveAs(artifactPath("Invariant_Mass_JER_up.png"));
 
     TCanvas *c13 = new TCanvas("c9", "Invariant Mass Reco JER Down", 600, 400);
     h_sig_JERDown->Draw("HIST");
     h_sig_JERDown->GetXaxis()->SetTitleOffset(1.4);
     h_sig_JERDown->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c13->SaveAs("Invariant_Mass_JER_down.png");
+    c13->SaveAs(artifactPath("Invariant_Mass_JER_down.png"));
 
     TCanvas *c14 = new TCanvas("c8", "Invariant Mass Reco PES Up", 600, 400);
     h_sig_PESUp->Draw("HIST");
     h_sig_PESUp->GetXaxis()->SetTitleOffset(1.4);
     h_sig_PESUp->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c14->SaveAs("Invariant_Mass_PES_up.png");
+    c14->SaveAs(artifactPath("Invariant_Mass_PES_up.png"));
 
     TCanvas *c15 = new TCanvas("c9", "Invariant Mass Reco PES Down", 600, 400);
     h_sig_PESDown->Draw("HIST");
     h_sig_PESDown->GetXaxis()->SetTitleOffset(1.4);
     h_sig_PESDown->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c15->SaveAs("Invariant_Mass_PES_down.png");
+    c15->SaveAs(artifactPath("Invariant_Mass_PES_down.png"));
 
     TCanvas *c16 = new TCanvas("c16", "Invariant Mass Reco CTag Up", 600, 400);
     h_sig_CTagUp->Draw("HIST");
@@ -797,7 +805,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     h_sig_CTagUp->GetXaxis()->SetLabelOffset(0.02);
     h_sig_CTagUp->SetStats(0);
     CMS_label(0.18, 0.87);
-    c16->SaveAs("Invariant_Mass_CTag_up.png");
+    c16->SaveAs(artifactPath("Invariant_Mass_CTag_up.png"));
 
     TCanvas *c17 = new TCanvas("c17", "Invariant Mass Reco CTag Down", 600, 400);
     h_sig_CTagDown->Draw("HIST");
@@ -805,7 +813,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     h_sig_CTagDown->GetXaxis()->SetLabelOffset(0.02);
     h_sig_CTagDown->SetStats(0);
     CMS_label(0.18, 0.87);
-    c17->SaveAs("Invariant_Mass_CTag_down.png");
+    c17->SaveAs(artifactPath("Invariant_Mass_CTag_down.png"));
 
     //PU JER JES C-tag comparison plots
     //{{{
@@ -837,7 +845,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     leg->SetBorderSize(0);
     leg->Draw();
 
-    c20->SaveAs("Invariant_Mass_PU_compare.png");
+    c20->SaveAs(artifactPath("Invariant_Mass_PU_compare.png"));
 
     //===============
     //PU comparison
@@ -939,7 +947,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     line1->SetLineStyle(2);
     line1->Draw();
 
-    cPUcomp->SaveAs("Pileup_Data_vs_MC_ratio.png");
+    cPUcomp->SaveAs(artifactPath("Pileup_Data_vs_MC_ratio.png"));
 
     // =====================
     // JER comparison
@@ -967,7 +975,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     legJER->Draw();
 
     CMS_label(0.18,0.87);
-    cJER->SaveAs("Invariant_Mass_JER_compare.png");
+    cJER->SaveAs(artifactPath("Invariant_Mass_JER_compare.png"));
 
 
     // =====================
@@ -996,7 +1004,7 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     legJES->Draw();
 
     CMS_label(0.18,0.87);
-    cJES->SaveAs("Invariant_Mass_JES_compare.png");
+    cJES->SaveAs(artifactPath("Invariant_Mass_JES_compare.png"));
 
     // =====================
     // JC-tag comparison
@@ -1019,11 +1027,16 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     legCTag->Draw();
 
     CMS_label(0.18,0.87);
-    cCTag->SaveAs("Invariant_Mass_CTag_compare.png");
+    cCTag->SaveAs(artifactPath("Invariant_Mass_CTag_compare.png"));
 
     //}}}
 
-    TFile *fOut = new TFile("CstarToGJ.root", "RECREATE");
+    TFile *fOut = TFile::Open(outputFile, "RECREATE");
+    if (!fOut || fOut->IsZombie()) {
+        std::cerr << "ERROR: cannot create output file " << outputFile << std::endl;
+        delete fOut;
+        return;
+    }
     h_M_cstar->Write();
     hM_gen->Write();
     hM_reco_selected ->Write();
@@ -1044,3 +1057,27 @@ void CstarToGJ_M1000_f0p1_13TeV_NANOAOD_ana::Loop()
     delete fOut;
 
 }//void
+
+void runCstarToGJAnalysis(const char *inputFile,
+                          const char *outputFile,
+                          double crossSectionPb)
+{
+    TFile *input = TFile::Open(inputFile, "READ");
+    if (!input || input->IsZombie()) {
+        std::cerr << "ERROR: cannot open input file " << inputFile << std::endl;
+        delete input;
+        return;
+    }
+
+    TTree *events = nullptr;
+    input->GetObject("Events", events);
+    if (!events) {
+        std::cerr << "ERROR: cannot find the Events tree in " << inputFile << std::endl;
+        input->Close();
+        delete input;
+        return;
+    }
+
+    CstarToGJAnalysis analysis(events);
+    analysis.Loop(outputFile, crossSectionPb);
+}

@@ -1,0 +1,18 @@
+# ROOT data, workspaces, and generated dictionaries
+*.root
+*.so
+*.pcm
+*_C.d
+*_C_ACLiC_*
+
+# Generated plots and runtime output
+*.png
+*.log
+*.out
+*_jobs/
+
+# Editor and Python temporary files
+*.swp
+*~
+__pycache__/
+*.pyc
