@@ -164,7 +164,7 @@ void plotOneCoupling(const TString &baseDir, const TString &outputDir,
     for (const SignalPoint &point : points) {
         if (graphIndex >= graphs.size()) break;
         legend.AddEntry(graphs[graphIndex++].get(),
-                        Form("m_{c^{*}/#bar{c}^{*}} = %.1f TeV",
+                        Form("m_{c*} = %.1f TeV",
                              point.mass / 1000.0), "l");
     }
     legend.Draw();
@@ -179,8 +179,6 @@ void plotOneCoupling(const TString &baseDir, const TString &outputDir,
     label.DrawLatex(0.94, 0.93, "41.8 fb^{-1} (13 TeV)");
     label.DrawLatex(0.25, 0.84, "f = " + couplingLabel);
     label.SetTextAlign(13);
-    label.DrawLatex(0.14, 0.885,
-                    "c^{*} + #bar{c}^{*} #rightarrow c/#bar{c} + #gamma");
 
     gSystem->mkdir(outputDir, true);
     const TString stem = outputDir + "/signal_shapes_f" + coupling;
