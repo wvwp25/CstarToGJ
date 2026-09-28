@@ -23,10 +23,11 @@ ROOT.gStyle.SetOptStat(0)
 BASE = Path(__file__).resolve().parent
 SIGNAL_BASE = Path(os.environ.get("CSTAR_SIGNAL_BASE", "/eos/user/h/hsiaoche/Signal"))
 OUT = BASE / "correct_signal_efficiency_report"
+ANALYSIS_SOURCE = BASE / "CstarToGJ_analysis.C"
+CROSS_SECTIONS = BASE / "cross_sections.csv"
 SAMPLE = re.compile(
     r"CstarToGJ_M(?P<mass>\d+)_(?P<coupling>f(?:0p1|0p5|1p0))_13TeV_NANOAOD"
 )
-XSEC = re.compile(r"\bdouble\s+xsec\s*=\s*([0-9.eE+\-]+)\s*;")
 CHARGE_INCLUSIVE_CSTAR = re.compile(
     r"(?:std::)?abs\s*\(\s*GenPart_pdgId\s*\[\s*i\s*\]\s*\)\s*==\s*4000004"
 )
@@ -41,28 +42,40 @@ def integral(hist) -> float:
     return float(hist.Integral())
 
 
+def read_cross_sections() -> dict[tuple[int, str], float]:
+    values = {}
+    with CROSS_SECTIONS.open(newline="") as handle:
+        for row in csv.reader(line for line in handle if not line.startswith("#")):
+            model, mass, coupling, cross_section, _ = row
+            if model == "CstarToGJ":
+                values[(int(mass), coupling)] = float(cross_section)
+    return values
+
+
 def read_sample(directory: Path) -> dict[str, float | int | str]:
     match = SAMPLE.fullmatch(directory.name)
     if match is None:
         raise ValueError(directory)
 
-    source = directory / f"{directory.name}_ana.C"
     output = directory / "CstarToGJ.root"
     nano = directory / f"{directory.name}.root"
-    source_text = source.read_text()
+    source_text = ANALYSIS_SOURCE.read_text()
     if not (
         CHARGE_INCLUSIVE_CSTAR.search(source_text)
         and CHARGE_INCLUSIVE_CHARM.search(source_text)
     ):
         raise RuntimeError(
-            f"{output} was produced by a charge-specific event loop. "
-            "Rerun the sample with the current CstarToGJ_analysis.C so the "
-            "report includes both c* -> c gamma and anti-c* -> anti-c gamma."
+            f"{ANALYSIS_SOURCE} is charge-specific; both particle charges are required."
         )
-    xsec_match = XSEC.search(source_text)
-    if xsec_match is None:
-        raise RuntimeError(f"No cross section found in {source}")
-    xsec_pb = float(xsec_match.group(1))
+    if output.stat().st_mtime < ANALYSIS_SOURCE.stat().st_mtime:
+        raise RuntimeError(
+            f"{output} predates the charge-inclusive analysis source; rerun this sample."
+        )
+    key = (int(match["mass"]), match["coupling"])
+    try:
+        xsec_pb = read_cross_sections()[key]
+    except KeyError as error:
+        raise RuntimeError(f"No cross section for mass/coupling {key} in {CROSS_SECTIONS}") from error
     produced = LUMI_PB * xsec_pb
 
     root_file = ROOT.TFile.Open(str(output))
@@ -138,11 +151,20 @@ def make_markdown(rows: list[dict[str, float | int | str]]) -> None:
 
 
 def make_plot(rows: list[dict[str, float | int | str]], corrected: bool) -> None:
-    canvas = ROOT.TCanvas("c", "c", 900, 720)
+    value_field = (
+        "corrected_effective_efficiency_percent"
+        if corrected
+        else "selection_efficiency_percent"
+    )
+    canvas_name = "c_corrected_efficiency" if corrected else "c_selection_efficiency"
+    canvas = ROOT.TCanvas(canvas_name, canvas_name, 900, 720)
     canvas.SetLeftMargin(0.13)
+    canvas.SetRightMargin(0.05)
     canvas.SetBottomMargin(0.12)
+    canvas.SetTopMargin(0.10)
     canvas.SetGrid()
-    frame = canvas.DrawFrame(900.0, 0.0, 3100.0, 0.25)
+    y_max = 1.15 * max(float(row[value_field]) / 100.0 for row in rows)
+    frame = canvas.DrawFrame(900.0, 0.0, 3100.0, y_max)
     ytitle = "Corrected effective acceptance #times efficiency" if corrected else "Signal selection efficiency"
     frame.SetTitle(f";m_{{c*/#bar{{c}}*}} [GeV];{ytitle}")
     frame.GetXaxis().SetTitleSize(0.045)
@@ -161,7 +183,7 @@ def make_plot(rows: list[dict[str, float | int | str]], corrected: bool) -> None
             graph.SetPoint(
                 index,
                 float(row["mass_GeV"]),
-                float(row["corrected_effective_efficiency_percent" if corrected else "selection_efficiency_percent"]) / 100.0,
+                float(row[value_field]) / 100.0,
             )
         graph.SetLineColor(colors[coupling])
         graph.SetMarkerColor(colors[coupling])
@@ -181,6 +203,8 @@ def make_plot(rows: list[dict[str, float | int | str]], corrected: bool) -> None
     label.SetTextAlign(31)
     label.DrawLatex(0.95, 0.93, "41.8 fb^{-1} (13 TeV)")
     stem = "signal_corrected_effective_efficiency_vs_mass" if corrected else "signal_selection_efficiency_vs_mass"
+    canvas.Modified()
+    canvas.Update()
     canvas.SaveAs(str(OUT / f"{stem}.pdf"))
     canvas.SaveAs(str(OUT / f"{stem}.png"))
 
