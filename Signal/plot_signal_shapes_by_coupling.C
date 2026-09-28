@@ -20,6 +20,8 @@
 #include <string>
 #include <vector>
 
+// The plotted workspaces are built from the charge-inclusive signal template,
+// which contains c* -> c gamma and anti-c* -> anti-c gamma events.
 namespace {
 
 struct SignalPoint {
@@ -85,7 +87,8 @@ void plotOneCoupling(const TString &baseDir, const TString &outputDir,
         return;
     }
 
-    TCanvas canvas("canvas_" + coupling, "Signal shapes", 1000, 750);
+    TCanvas canvas("canvas_" + coupling,
+                   "Charge-inclusive c* and anti-c* signal shapes", 1000, 750);
     canvas.SetLeftMargin(0.13);
     canvas.SetRightMargin(0.04);
     canvas.SetBottomMargin(0.12);
@@ -161,7 +164,8 @@ void plotOneCoupling(const TString &baseDir, const TString &outputDir,
     for (const SignalPoint &point : points) {
         if (graphIndex >= graphs.size()) break;
         legend.AddEntry(graphs[graphIndex++].get(),
-                        Form("m_{c*} = %.1f TeV", point.mass / 1000.0), "l");
+                        Form("m_{c^{*}/#bar{c}^{*}} = %.1f TeV",
+                             point.mass / 1000.0), "l");
     }
     legend.Draw();
 
@@ -174,6 +178,9 @@ void plotOneCoupling(const TString &baseDir, const TString &outputDir,
     label.SetTextFont(42);
     label.DrawLatex(0.94, 0.93, "41.8 fb^{-1} (13 TeV)");
     label.DrawLatex(0.25, 0.84, "f = " + couplingLabel);
+    label.SetTextAlign(13);
+    label.DrawLatex(0.14, 0.885,
+                    "c^{*} + #bar{c}^{*} #rightarrow c/#bar{c} + #gamma");
 
     gSystem->mkdir(outputDir, true);
     const TString stem = outputDir + "/signal_shapes_f" + coupling;
@@ -207,8 +214,8 @@ void plotOneCoupling(const TString &baseDir, const TString &outputDir,
 //   root -l -b -q '/path/to/plot_signal_shapes_by_coupling.C()'
 // Optional arguments can override input/output directories and plot range.
 void plot_signal_shapes_by_coupling(
-    TString baseDir = "/eos/home-h/hsiaoche/Signal",
-    TString outputDir = "/eos/home-h/hsiaoche/Signal/combined_signal_shapes",
+    TString baseDir = "/eos/user/h/hsiaoche/Signal",
+    TString outputDir = "/eos/user/h/hsiaoche/Signal/combined_signal_shapes",
     double xMin = 500.0, double xMax = 3500.0, int nSamples = 3001)
 {
     gROOT->SetBatch(kTRUE);
