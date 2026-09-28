@@ -1,28 +1,78 @@
-// File: plot_xsec_cstar_bstar.C
-// Usage:
-//   root -l -q 'plot_xsec_cstar_bstar.C(1.0,true)'
-//   root -l -q 'plot_xsec_cstar_bstar.C(1.0,false)'
+// Plot the c* production cross sections stored in cross_sections.csv.
+// Usage from any directory:
+//   root -l -b -q '/path/to/plot_xsec_cstar_bstar.C(1.0,true)'
 //
-// BR is applied as a common factor (default BR=1).
-// If y_in_fb=true, convert pb -> fb by *1000 and label axis [fb].
-//
-// Draws 3 curves:
-//   1) c*  f=0.1  (your original numbers)
-//   2) c*  f=1.0
-//   3) b*  f=1.0
+// BR is applied as a common factor (default BR=1).  If y_in_fb=true,
+// cross sections are converted from pb to fb.
 
+// The historical file/function name is retained so existing commands continue
+// to work, but no b* samples are read or plotted.
+
+#include "TAxis.h"
 #include "TCanvas.h"
 #include "TGraphErrors.h"
-#include "TAxis.h"
-#include "TLegend.h"
 #include "TLatex.h"
+#include "TLegend.h"
+#include "TString.h"
 #include "TStyle.h"
+#include "TSystem.h"
 
-void plot_xsec_cstar_bstar(double BR = 1.0, bool y_in_fb = true)
+#include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+
+namespace {
+
+struct CrossSectionPoint {
+  double massTeV;
+  double valuePb;
+  double uncertaintyPb;
+};
+
+std::vector<CrossSectionPoint> readCrossSections(const TString &csvFile,
+                                                 const std::string &coupling)
 {
-  // -----------------------------
-  // Style (CMS-ish)
-  // -----------------------------
+  std::ifstream input(csvFile.Data());
+  if (!input) {
+    std::cerr << "ERROR: cannot open " << csvFile << std::endl;
+    return {};
+  }
+
+  std::vector<CrossSectionPoint> points;
+  std::string line;
+  while (std::getline(input, line)) {
+    if (line.empty() || line[0] == '#') continue;
+
+    std::stringstream row(line);
+    std::string model, mass, foundCoupling, value, uncertainty;
+    if (!std::getline(row, model, ',') || !std::getline(row, mass, ',') ||
+        !std::getline(row, foundCoupling, ',') ||
+        !std::getline(row, value, ',') ||
+        !std::getline(row, uncertainty, ',')) continue;
+    if (model != "CstarToGJ" || foundCoupling != coupling) continue;
+
+    points.push_back({std::stod(mass) / 1000.0, std::stod(value),
+                      std::stod(uncertainty)});
+  }
+  std::sort(points.begin(), points.end(),
+            [](const CrossSectionPoint &a, const CrossSectionPoint &b) {
+              return a.massTeV < b.massTeV;
+            });
+  return points;
+}
+
+} // namespace
+
+void plot_xsec_cstar_bstar(
+    double BR = 1.0, bool y_in_fb = true, TString csvFile = "",
+    TString outputDir = "/eos/user/h/hsiaoche/Signal")
+{
+  if (csvFile.IsNull())
+    csvFile = TString(gSystem->DirName(__FILE__)) + "/cross_sections.csv";
+
   gStyle->SetOptStat(0);
   gStyle->SetTitle(0);
   gStyle->SetLineWidth(2);
@@ -32,119 +82,89 @@ void plot_xsec_cstar_bstar(double BR = 1.0, bool y_in_fb = true)
   gStyle->SetPadRightMargin(0.05);
   gStyle->SetPadTopMargin(0.08);
 
-  const int N = 4;
-  double mTeV[N] = {1.0, 1.5, 2.0, 2.5};
-  double xerr[N] = {0,0,0,0};
+  const std::vector<std::string> couplings = {"f0p1", "f0p5", "f1p0"};
+  const int colors[] = {kGreen + 2, kOrange + 7, kAzure + 2};
+  const int markers[] = {20, 22, 21};
 
-  // -----------------------------
-  // Inputs (sigma in pb)
-  // -----------------------------
-  // c* f=0.1  (your original numbers)
-  double c01_pb[N]    = {1.291e-02, 1.479e-03, 2.360e-04, 5.052e-05};
-  double c01_errpb[N] = {2.863e-04, 3.216e-05, 5.162e-06, 1.083e-06};
+  TCanvas *canvas = new TCanvas("c_xsec_cstar", "c* cross sections", 900, 700);
+  canvas->SetLogy();
 
-  // c* f=1.0
-  double c10_pb[N]    = {1.272e+00, 1.368e-01, 2.596e-02, 5.793e-03};
-  double c10_errpb[N] = {2.730e-02, 2.883e-03, 1.686e-03, 3.898e-04};
+  TLegend *legend = new TLegend(0.60, 0.68, 0.88, 0.86);
+  legend->SetBorderSize(0);
+  legend->SetFillStyle(0);
+  legend->SetTextSize(0.035);
 
-  // b* f=1.0
-  double b10_pb[N]    = {2.154e-01, 2.168e-02, 3.553e-03, 7.210e-04};
-  double b10_errpb[N] = {4.629e-03, 4.548e-04, 7.347e-05, 1.489e-05};
+  std::vector<TGraphErrors *> graphs;
+  for (unsigned int curve = 0; curve < couplings.size(); ++curve) {
+    const auto points = readCrossSections(csvFile, couplings[curve]);
+    if (points.empty()) {
+      std::cerr << "ERROR: no CstarToGJ points for " << couplings[curve]
+                << " in " << csvFile << std::endl;
+      continue;
+    }
 
-  auto scale = [&](double v_pb){ return (y_in_fb ? v_pb*1000.0 : v_pb); };
+    const double unitScale = y_in_fb ? 1000.0 : 1.0;
+    TGraphErrors *graph = new TGraphErrors(points.size());
+    graph->SetName(Form("xsec_cstar_%s", couplings[curve].c_str()));
+    for (unsigned int i = 0; i < points.size(); ++i) {
+      graph->SetPoint(i, points[i].massTeV,
+                      points[i].valuePb * BR * unitScale);
+      graph->SetPointError(i, 0.0,
+                           points[i].uncertaintyPb * BR * unitScale);
+    }
+    graph->SetMarkerStyle(markers[curve]);
+    graph->SetMarkerSize(1.1);
+    graph->SetLineWidth(2);
+    graph->SetMarkerColor(colors[curve]);
+    graph->SetLineColor(colors[curve]);
+    graphs.push_back(graph);
 
-  // Convert to sigma*BR and optional fb
-  double c01_y[N], c01_yerr[N], c10_y[N], c10_yerr[N], b10_y[N], b10_yerr[N];
-  for (int i=0;i<N;++i){
-    c01_y[i]    = scale(c01_pb[i]    * BR);
-    c01_yerr[i] = scale(c01_errpb[i] * BR);
-
-    c10_y[i]    = scale(c10_pb[i]    * BR);
-    c10_yerr[i] = scale(c10_errpb[i] * BR);
-
-    b10_y[i]    = scale(b10_pb[i]    * BR);
-    b10_yerr[i] = scale(b10_errpb[i] * BR);
+    std::string couplingLabel = couplings[curve].substr(1);
+    std::replace(couplingLabel.begin(), couplingLabel.end(), 'p', '.');
+    legend->AddEntry(graph, Form("c*, f = %s", couplingLabel.c_str()), "lp");
   }
 
-  // -----------------------------
-  // Canvas
-  // -----------------------------
-  TCanvas *c = new TCanvas("c","c",900,700);
-  c->SetLogy();
+  if (graphs.empty()) {
+    std::cerr << "ERROR: no c* cross sections were plotted" << std::endl;
+    return;
+  }
 
-  // Build graphs
-  TGraphErrors *gr_c01 = new TGraphErrors(N, mTeV, c01_y, xerr, c01_yerr);
-  TGraphErrors *gr_c10 = new TGraphErrors(N, mTeV, c10_y, xerr, c10_yerr);
-  TGraphErrors *gr_b10 = new TGraphErrors(N, mTeV, b10_y, xerr, b10_yerr);
+  TGraphErrors *frame = graphs.front();
+  frame->SetTitle("");
+  frame->GetXaxis()->SetTitle("m_{c*} [TeV]");
+  frame->GetYaxis()->SetTitle(y_in_fb ? "#sigma B [fb]" : "#sigma B [pb]");
+  frame->GetXaxis()->SetTitleSize(0.05);
+  frame->GetYaxis()->SetTitleSize(0.05);
+  frame->GetXaxis()->SetLabelSize(0.045);
+  frame->GetYaxis()->SetLabelSize(0.045);
+  frame->GetYaxis()->SetTitleOffset(1.0);
+  frame->GetXaxis()->SetLimits(0.9, 3.1);
+  frame->SetMinimum(y_in_fb ? 3e-3 : 3e-6);
+  frame->SetMaximum(y_in_fb ? 3e3 : 3.0);
+  frame->Draw("ALP");
+  for (unsigned int i = 1; i < graphs.size(); ++i)
+    graphs[i]->Draw("LP SAME");
+  legend->Draw();
 
-  // Style each curve (match CMS-like multi-curve look)
-  gr_c01->SetMarkerStyle(20);
-  gr_c01->SetMarkerSize(1.2);
-  gr_c01->SetLineWidth(2);
-  gr_c01->SetMarkerColor(kGreen-2);
-  gr_c01->SetLineColor(kGreen-2);
+  TLatex label;
+  label.SetNDC();
+  label.SetTextFont(42);
+  label.SetTextSize(0.04);
+  label.SetTextAlign(31);
+  label.DrawLatex(0.95, 0.93, "13 TeV");
+  label.SetTextAlign(13);
+  label.SetTextFont(52);
+  label.SetTextSize(0.035);
+  label.DrawLatex(0.14, 0.91, "Private work (CMS simulation)");
 
-  gr_c10->SetMarkerStyle(21);
-  gr_c10->SetMarkerSize(1.2);
-  gr_c10->SetLineWidth(2);
-  gr_c10->SetMarkerColor(kAzure+2);
-  gr_c10->SetLineColor(kAzure+2);
-
-  gr_b10->SetMarkerStyle(22);
-  gr_b10->SetMarkerSize(1.2);
-  gr_b10->SetLineWidth(2);
-  gr_b10->SetMarkerColor(kPink+8);
-  gr_b10->SetLineColor(kPink+8);
-
-  // Axes: use first graph as the frame
-  gr_c01->SetTitle("");
-  gr_c01->GetXaxis()->SetTitle("Mass [TeV]");
-  gr_c01->GetYaxis()->SetTitle(y_in_fb ? "#sigma B [fb]" : "#sigma B [pb]");
-  gr_c01->GetXaxis()->SetTitleSize(0.05);
-  gr_c01->GetYaxis()->SetTitleSize(0.05);
-  gr_c01->GetXaxis()->SetLabelSize(0.045);
-  gr_c01->GetYaxis()->SetLabelSize(0.045);
-  gr_c01->GetYaxis()->SetTitleOffset(1.0);
-  // x-range
-  gr_c01->GetXaxis()->SetLimits(0.9, 2.6);
-
-  // y-range: auto-ish for these three curves
-  // (in fb: b* ~0.7 fb at 2.5 TeV, c* f1 ~1270 fb at 1 TeV)
-  if (y_in_fb) { gr_c01->SetMinimum(3e-2); gr_c01->SetMaximum(3e3); }
-  else        { gr_c01->SetMinimum(3e-5); gr_c01->SetMaximum(3.0); }
-
-  gr_c01->Draw("AP");          // axes + points
-  gr_c01->Draw("LP SAME");
-  gr_c10->Draw("LP SAME");
-  gr_b10->Draw("LP SAME");
-
-  // Legend
-  TLegend *leg = new TLegend(0.55, 0.68, 0.88, 0.86);
-  leg->SetBorderSize(0);
-  leg->SetFillStyle(0);
-  leg->SetTextSize(0.035);
-  leg->AddEntry(gr_c10, Form("c*  f=1.0  "), "lp");
-  leg->AddEntry(gr_c01, Form("c*  f=0.1  "), "lp");
-  leg->AddEntry(gr_b10, Form("b*  f=1.0  "), "lp");
-  leg->Draw();
-
-  // CMS-like text
-  TLatex lat;
-  lat.SetNDC(true);
-  lat.SetTextFont(42);
-  lat.SetTextSize(0.055);
-  lat.DrawLatex(0.14, 0.93, "");
-  lat.SetTextSize(0.04);
-  lat.DrawLatex(0.85, 0.93, "13 TeV");
-
-        {
-            gPad->Update();
-            if (auto *statsBox = gPad->GetPrimitive("stats")) statsBox->Delete();
-            TLatex privateWorkLabel;
-            privateWorkLabel.SetNDC();
-            privateWorkLabel.SetTextFont(52);
-            privateWorkLabel.SetTextSize(0.035);
-            privateWorkLabel.DrawLatex(0.14, 0.93, "Private work (CMS simulation)");
-        }
-  c->SaveAs("sigmaB_cstar_bstar.png");
+  if (gSystem->mkdir(outputDir, true) != 0 &&
+      gSystem->AccessPathName(outputDir)) {
+    std::cerr << "ERROR: cannot create output directory " << outputDir
+              << std::endl;
+    return;
+  }
+  const TString outputStem = outputDir + "/sigmaB_cstar";
+  canvas->SaveAs(outputStem + ".png");
+  canvas->SaveAs(outputStem + ".pdf");
+  std::cout << "Wrote " << outputStem << ".png/.pdf" << std::endl;
 }
