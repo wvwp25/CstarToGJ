@@ -266,7 +266,7 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
 
         std::vector<UInt_t> cstar; //contains indices of all generated c* particles
         for (UInt_t i= 0; i< nGenPart; ++i){
-            if (GenPart_pdgId[i] == 4000004){
+            if (std::abs(GenPart_pdgId[i]) == 4000004){
                 cstar.push_back(i);
             }
 
@@ -280,7 +280,7 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
             for (UInt_t i= 0; i< nGenPart; ++i){
                 if (GenPart_genPartIdxMother[i] != idx) continue;
                 if (GenPart_pdgId[i] == 22) photon = i;
-                if (GenPart_pdgId[i] == 4) charm = i;
+                if (std::abs(GenPart_pdgId[i]) == 4) charm = i;
             }
             if (photon >=0 && charm >=0){
                 cstarIdx = idx;
