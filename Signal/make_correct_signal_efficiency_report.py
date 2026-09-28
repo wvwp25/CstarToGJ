@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the signal acceptance/efficiency report from the analysis ROOT outputs.
+"""Build the charge-inclusive c*/anti-c* efficiency report from ROOT outputs.
 
 Unlike the older diagnostic cutflow, this script reads the histograms produced by
 the actual signal event loop.  Consequently the generator matching, nominal
@@ -10,6 +10,7 @@ the same ones used by the signal templates.
 from __future__ import annotations
 
 import csv
+import os
 import re
 from pathlib import Path
 
@@ -20,11 +21,18 @@ ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
 
 BASE = Path(__file__).resolve().parent
+SIGNAL_BASE = Path(os.environ.get("CSTAR_SIGNAL_BASE", "/eos/user/h/hsiaoche/Signal"))
 OUT = BASE / "correct_signal_efficiency_report"
 SAMPLE = re.compile(
     r"CstarToGJ_M(?P<mass>\d+)_(?P<coupling>f(?:0p1|0p5|1p0))_13TeV_NANOAOD"
 )
 XSEC = re.compile(r"\bdouble\s+xsec\s*=\s*([0-9.eE+\-]+)\s*;")
+CHARGE_INCLUSIVE_CSTAR = re.compile(
+    r"(?:std::)?abs\s*\(\s*GenPart_pdgId\s*\[\s*i\s*\]\s*\)\s*==\s*4000004"
+)
+CHARGE_INCLUSIVE_CHARM = re.compile(
+    r"(?:std::)?abs\s*\(\s*GenPart_pdgId\s*\[\s*i\s*\]\s*\)\s*==\s*4"
+)
 LUMI_PB = 41800.0
 
 
@@ -42,6 +50,15 @@ def read_sample(directory: Path) -> dict[str, float | int | str]:
     output = directory / "CstarToGJ.root"
     nano = directory / f"{directory.name}.root"
     source_text = source.read_text()
+    if not (
+        CHARGE_INCLUSIVE_CSTAR.search(source_text)
+        and CHARGE_INCLUSIVE_CHARM.search(source_text)
+    ):
+        raise RuntimeError(
+            f"{output} was produced by a charge-specific event loop. "
+            "Rerun the sample with the current CstarToGJ_analysis.C so the "
+            "report includes both c* -> c gamma and anti-c* -> anti-c gamma."
+        )
     xsec_match = XSEC.search(source_text)
     if xsec_match is None:
         raise RuntimeError(f"No cross section found in {source}")
@@ -88,8 +105,9 @@ def make_csv(rows: list[dict[str, float | int | str]]) -> None:
 
 def make_markdown(rows: list[dict[str, float | int | str]]) -> None:
     explanation = [
-        "# Corrected c* signal efficiency report",
+        "# Corrected c* + anti-c* signal efficiency report",
         "",
+        "The report is charge-inclusive: both c* -> c gamma and anti-c* -> anti-c gamma are included.",
         "All efficiencies use the generated signal normalization as denominator.",
         "`Selection efficiency` is obtained from the nominal selected histogram before PU and c-tag SFs.",
         "`Corrected effective efficiency` is obtained from the nominal signal template after PU reweighting and the c-tag SF.",
@@ -104,7 +122,7 @@ def make_markdown(rows: list[dict[str, float | int | str]]) -> None:
         explanation += [
             f"## Coupling {coupling[1:].replace('p', '.')}",
             "",
-            "| Mass (GeV) | Generated events | c* -> c gamma found (%) | Gen c-jet matched (%) | Full selection (%) | PU+c-tag corrected Aeff (%) | Expected yield |",
+            "| Mass (GeV) | Generated events | c*/anti-c* -> c/anti-c + gamma found (%) | Gen c/anti-c jet matched (%) | Full selection (%) | PU+c-tag corrected Aeff (%) | Expected yield |",
             "|--:|--:|--:|--:|--:|--:|--:|",
         ]
         for row in selected:
@@ -126,7 +144,7 @@ def make_plot(rows: list[dict[str, float | int | str]], corrected: bool) -> None
     canvas.SetGrid()
     frame = canvas.DrawFrame(900.0, 0.0, 3100.0, 0.25)
     ytitle = "Corrected effective acceptance #times efficiency" if corrected else "Signal selection efficiency"
-    frame.SetTitle(f";m_{{c*}} [GeV];{ytitle}")
+    frame.SetTitle(f";m_{{c*/#bar{{c}}*}} [GeV];{ytitle}")
     frame.GetXaxis().SetTitleSize(0.045)
     frame.GetYaxis().SetTitleSize(0.045)
 
@@ -170,9 +188,15 @@ def make_plot(rows: list[dict[str, float | int | str]], corrected: bool) -> None
 def main() -> None:
     OUT.mkdir(exist_ok=True)
     directories = sorted(
-        (path for path in BASE.glob("CstarToGJ_M*_f*_13TeV_NANOAOD") if SAMPLE.fullmatch(path.name)),
+        (
+            path
+            for path in SIGNAL_BASE.glob("CstarToGJ_M*_f*_13TeV_NANOAOD")
+            if SAMPLE.fullmatch(path.name)
+        ),
         key=lambda path: (SAMPLE.fullmatch(path.name)["coupling"], int(SAMPLE.fullmatch(path.name)["mass"])),
     )
+    if not directories:
+        raise RuntimeError(f"No signal sample directories found under {SIGNAL_BASE}")
     rows = [read_sample(directory) for directory in directories]
     make_csv(rows)
     make_markdown(rows)
