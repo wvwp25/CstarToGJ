@@ -91,6 +91,10 @@ void saveFitPlot(RooRealVar &x,
 {
     TCanvas canvas((std::string("c_fit_") + spec.histName).c_str(),
                    Form("DSCB Fit %s", spec.label), 800, 600);
+    canvas.SetLeftMargin(0.13);
+    canvas.SetRightMargin(0.05);
+    canvas.SetBottomMargin(0.12);
+    canvas.SetTopMargin(0.10);
 
     // Thesis-style plots use compact in-frame annotations rather than a title
     // above the plotting area.
@@ -158,7 +162,7 @@ void saveFitPlot(RooRealVar &x,
             privateWorkLabel.SetNDC();
             privateWorkLabel.SetTextFont(52);
             privateWorkLabel.SetTextSize(0.035);
-            privateWorkLabel.DrawLatex(0.1, 0.91, "Private work (CMS simulation)");
+            privateWorkLabel.DrawLatex(0.15, 0.91, "Private work (CMS simulation)");
         }
     canvas.SaveAs(plotName);
     delete frame;
