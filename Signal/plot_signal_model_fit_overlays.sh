@@ -211,6 +211,13 @@ for mass in masses:
     mass_label.SetTextAlign(13)
     mass_label.DrawLatex(0.16, 0.86, f"c* = {mass / 1000.0:.1f} TeV")
 
+    private_work_label = ROOT.TLatex()
+    private_work_label.SetNDC(True)
+    private_work_label.SetTextFont(52)
+    private_work_label.SetTextSize(0.035)
+    private_work_label.SetTextAlign(13)
+    private_work_label.DrawLatex(0.13, 0.94, "Private work (CMS simulation)")
+
     stem = os.path.join(output_dir, f"DSCB_fit_paramSyst_overlays_M{mass}")
     outputs = (stem + ".png", stem + ".pdf")
     for output in outputs:
