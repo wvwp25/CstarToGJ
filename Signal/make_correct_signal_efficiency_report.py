@@ -165,8 +165,8 @@ def make_plot(rows: list[dict[str, float | int | str]], corrected: bool) -> None
     canvas.SetGrid()
     y_max = 1.15 * max(float(row[value_field]) / 100.0 for row in rows)
     frame = canvas.DrawFrame(900.0, 0.0, 3100.0, y_max)
-    ytitle = "Corrected effective acceptance #times efficiency" if corrected else "Signal selection efficiency"
-    frame.SetTitle(f";m_{{c*/#bar{{c}}*}} [GeV];{ytitle}")
+    ytitle = "Acceptance #times Efficiency" if corrected else "Signal selection efficiency"
+    frame.SetTitle(f";m_{{c*}} [GeV];{ytitle}")
     frame.GetXaxis().SetTitleSize(0.045)
     frame.GetYaxis().SetTitleSize(0.045)
 
@@ -198,10 +198,10 @@ def make_plot(rows: list[dict[str, float | int | str]], corrected: bool) -> None
     label.SetNDC()
     label.SetTextFont(52)
     label.SetTextSize(0.040)
-    label.DrawLatex(0.235, 0.93, "Private work (CMS simulation)")
+    label.DrawLatex(0.15, 0.91, "Private work (CMS simulation)")
     label.SetTextFont(42)
     label.SetTextAlign(31)
-    label.DrawLatex(0.95, 0.93, "41.8 fb^{-1} (13 TeV)")
+    label.DrawLatex(0.95, 0.91, "41.8 fb^{-1} (13 TeV)")
     stem = "signal_corrected_effective_efficiency_vs_mass" if corrected else "signal_selection_efficiency_vs_mass"
     canvas.Modified()
     canvas.Update()
