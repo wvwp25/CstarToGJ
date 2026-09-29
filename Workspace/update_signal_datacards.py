@@ -141,6 +141,11 @@ def read_signal_values(
         raise RuntimeError(
             "PyROOT is required; initialize the CMSSW environment before running"
         ) from error
+    ROOT.gROOT.SetBatch(True)
+    # EOS may emit a failed remote-redirect diagnostic before successfully
+    # opening the locally mounted path. Explicit object checks below still
+    # turn genuine open/read failures into updater errors.
+    ROOT.gErrorIgnoreLevel = ROOT.kFatal + 1
 
     root_file = ROOT.TFile.Open(str(signal_file), "READ")
     if not root_file or root_file.IsZombie():
