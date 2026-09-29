@@ -92,8 +92,11 @@ void saveFitPlot(RooRealVar &x,
     TCanvas canvas((std::string("c_fit_") + spec.histName).c_str(),
                    Form("DSCB Fit %s", spec.label), 800, 600);
 
-    RooPlot *frame = x.frame(Range("fitRange"), Bins(kPlotBins),
-                             Title(Form("%s", spec.label)));
+    // Thesis-style plots use compact in-frame annotations rather than a title
+    // above the plotting area.
+    // RooFit treats Title("") as a request for its automatic "A RooPlot of"
+    // title. A single blank character suppresses that fallback visibly.
+    RooPlot *frame = x.frame(Range("fitRange"), Bins(kPlotBins), Title(" "));
     data.plotOn(frame, Name("data"),
                 Binning(kPlotBins),
                 DataError(RooAbsData::SumW2),
@@ -109,7 +112,7 @@ void saveFitPlot(RooRealVar &x,
                 LineWidth(2));
 
     frame->GetXaxis()->SetTitle("m_{#gamma j} [GeV]");
-    frame->GetYaxis()->SetTitle("Events");
+    frame->GetYaxis()->SetTitle("Expected events / bin");
     // Keep the tested mass at the horizontal center, as in Figure 67 of the
     // analysis note.  Use the largest symmetric interval contained in the fit
     // range so no extrapolated region is shown.
@@ -155,7 +158,7 @@ void saveFitPlot(RooRealVar &x,
             privateWorkLabel.SetNDC();
             privateWorkLabel.SetTextFont(52);
             privateWorkLabel.SetTextSize(0.035);
-            privateWorkLabel.DrawLatex(0.14, 0.86, "Private work (CMS simulation)");
+            privateWorkLabel.DrawLatex(0.1, 0.91, "Private work (CMS simulation)");
         }
     canvas.SaveAs(plotName);
     delete frame;
