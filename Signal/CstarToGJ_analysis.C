@@ -256,73 +256,76 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
             std::cout << "Event " << jentry << " | weight down = " << weight_PUDown << std::endl;
         }
 
-        if (nPhoton < 1 || nJet < 1 || nGenPart <= 0 || nGenJet <= 0)   continue;
+        // ***** Generator-level diagnostics *****
+        // These checks must not veto an event before the reconstructed selection.
+        // They are used only to fill the generator-level monitoring histograms.
+        if (nGenPart > 0) {
+            int cstarIdx = -1;
+            int genPhotonIdx = -1;
+            int genCharmIdx = -1;
 
-        // ***** Gen *****
-
-        int cstarIdx = -1;
-        int genPhotonIdx = -1;
-        int genCharmIdx = -1;
-
-        std::vector<UInt_t> cstar; //contains indices of all generated c* particles
-        for (UInt_t i= 0; i< nGenPart; ++i){
-            if (std::abs(GenPart_pdgId[i]) == 4000004){
-                cstar.push_back(i);
+            std::vector<UInt_t> cstar; // indices of all generated c* and anti-c* particles
+            for (UInt_t i = 0; i < nGenPart; ++i) {
+                if (std::abs(GenPart_pdgId[i]) == 4000004) {
+                    cstar.push_back(i);
+                }
             }
 
-        }//for (UInt_t i =0; i< nGenPart; ++i)
-        if (cstar.size() == 0) continue;
+            for (UInt_t idx : cstar) {
+                int photon = -1;
+                int charm = -1;
 
-        for (UInt_t idx : cstar){
-            int photon = -1;
-            int charm = -1;
-
-            for (UInt_t i= 0; i< nGenPart; ++i){
-                if (GenPart_genPartIdxMother[i] != idx) continue;
-                if (GenPart_pdgId[i] == 22) photon = i;
-                if (std::abs(GenPart_pdgId[i]) == 4) charm = i;
-            }
-            if (photon >=0 && charm >=0){
-                cstarIdx = idx;
-                genPhotonIdx = photon;
-                genCharmIdx = charm;
-                break;
+                for (UInt_t i = 0; i < nGenPart; ++i) {
+                    if (GenPart_genPartIdxMother[i] != idx) continue;
+                    if (GenPart_pdgId[i] == 22) photon = i;
+                    if (std::abs(GenPart_pdgId[i]) == 4) charm = i;
+                }
+                if (photon >= 0 && charm >= 0) {
+                    cstarIdx = idx;
+                    genPhotonIdx = photon;
+                    genCharmIdx = charm;
+                    break;
+                }
             }
 
-        }//for (UInt_t idx : cstar)
-        if (cstarIdx < 0) continue;
+            if (cstarIdx >= 0) {
+                TLorentzVector cstar_p4;
+                cstar_p4.SetPtEtaPhiM(GenPart_pt[cstarIdx], GenPart_eta[cstarIdx],
+                                      GenPart_phi[cstarIdx], GenPart_mass[cstarIdx]);
+                h_M_cstar->Fill(cstar_p4.M(), weight_central);
 
-        // Cstar mass
-        TLorentzVector cstar_p4;
-        cstar_p4.SetPtEtaPhiM(GenPart_pt[cstarIdx], GenPart_eta[cstarIdx], GenPart_phi[cstarIdx], GenPart_mass[cstarIdx]);
-        h_M_cstar->Fill(cstar_p4.M(), weight_central);
+                TLorentzVector c_p4;
+                c_p4.SetPtEtaPhiM(GenPart_pt[genCharmIdx], GenPart_eta[genCharmIdx],
+                                  GenPart_phi[genCharmIdx], GenPart_mass[genCharmIdx]);
 
-        //Match Gen charm GenJet
-        TLorentzVector c_p4, GenJet_p4;
+                int genJetIdx = -1;
+                float best_deltaR_cJet = 999;
+                for (UInt_t j = 0; j < nGenJet; ++j) {
+                    TLorentzVector genJet_p4;
+                    genJet_p4.SetPtEtaPhiM(GenJet_pt[j], GenJet_eta[j],
+                                           GenJet_phi[j], GenJet_mass[j]);
+                    const float deltaR_cJet = c_p4.DeltaR(genJet_p4);
+                    if (deltaR_cJet < best_deltaR_cJet) {
+                        best_deltaR_cJet = deltaR_cJet;
+                        genJetIdx = j;
+                    }
+                }
 
-        int genJetIdx = -1;
-        float best_deltaR_cJet = 999;
-        for (UInt_t j= 0; j< nGenJet; ++j){
-
-
-            GenJet_p4.SetPtEtaPhiM(GenJet_pt[j], GenJet_eta[j], GenJet_phi[j], GenJet_mass[j]);
-            c_p4.SetPtEtaPhiM(GenPart_pt[genCharmIdx], GenPart_eta[genCharmIdx], GenPart_phi[genCharmIdx], GenPart_mass[genCharmIdx]);
-
-            float deltaR_cJet = c_p4.DeltaR(GenJet_p4);
-            if (deltaR_cJet < best_deltaR_cJet){
-                best_deltaR_cJet = deltaR_cJet;
-                genJetIdx = j;
+                if (genJetIdx >= 0 && best_deltaR_cJet <= 0.2) {
+                    TLorentzVector gen_photon_p4, gen_jet_p4;
+                    gen_photon_p4.SetPtEtaPhiM(GenPart_pt[genPhotonIdx],
+                                               GenPart_eta[genPhotonIdx],
+                                               GenPart_phi[genPhotonIdx],
+                                               GenPart_mass[genPhotonIdx]);
+                    gen_jet_p4.SetPtEtaPhiM(GenJet_pt[genJetIdx], GenJet_eta[genJetIdx],
+                                            GenJet_phi[genJetIdx], GenJet_mass[genJetIdx]);
+                    hM_gen->Fill((gen_photon_p4 + gen_jet_p4).M(), weight_central);
+                }
             }
-        }//for (UInt_t j= 0; j< nGenJet; ++j)
-        if (best_deltaR_cJet > 0.2) continue;
+        }
 
-        //Gen invariant mass
-        TLorentzVector gen_photon_p4, gen_jet_p4;
-        gen_photon_p4.SetPtEtaPhiM(GenPart_pt[genPhotonIdx], GenPart_eta[genPhotonIdx], GenPart_phi[genPhotonIdx], GenPart_mass[genPhotonIdx]);
-        gen_jet_p4.SetPtEtaPhiM(GenJet_pt[genJetIdx], GenJet_eta[genJetIdx], GenJet_phi[genJetIdx], GenJet_mass[genJetIdx]);
-
-        TLorentzVector gen_M_p4 = gen_photon_p4 + gen_jet_p4;
-        hM_gen->Fill(gen_M_p4.M(), weight_central);
+        // The reconstructed selection is independent of generator-level diagnostics.
+        if (nPhoton < 1 || nJet < 1) continue;
 
 
         // *******************************  RECO Photon + Jet selection *******************************
