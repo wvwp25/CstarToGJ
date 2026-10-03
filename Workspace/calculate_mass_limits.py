@@ -72,7 +72,11 @@ def arguments() -> argparse.Namespace:
     parser.add_argument(
         "--csv-output",
         type=Path,
-        help="optionally write the calculated crossings to a CSV file",
+        default=Path("/eos/user/h/hsiaoche/workspace/expected_mass_limits.csv"),
+        help=(
+            "write the calculated crossings to this CSV file "
+            "(default: /eos/user/h/hsiaoche/workspace/expected_mass_limits.csv)"
+        ),
     )
     return parser.parse_args()
 
@@ -247,22 +251,21 @@ def main() -> int:
             )
         print()
 
-    if args.csv_output:
-        args.csv_output.parent.mkdir(parents=True, exist_ok=True)
-        with args.csv_output.open("w", newline="") as handle:
-            writer = csv.writer(handle)
-            writer.writerow(
-                [
-                    "coupling",
-                    "quantile",
-                    "mass_limit_GeV",
-                    "bracket_low_GeV",
-                    "bracket_high_GeV",
-                    "crossing_sigma_pb_or_status",
-                ]
-            )
-            writer.writerows(rows)
-        print(f"Wrote {args.csv_output}")
+    args.csv_output.parent.mkdir(parents=True, exist_ok=True)
+    with args.csv_output.open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(
+            [
+                "coupling",
+                "quantile",
+                "mass_limit_GeV",
+                "bracket_low_GeV",
+                "bracket_high_GeV",
+                "crossing_sigma_pb_or_status",
+            ]
+        )
+        writer.writerows(rows)
+    print(f"Wrote {args.csv_output}")
     return 0
 
 
