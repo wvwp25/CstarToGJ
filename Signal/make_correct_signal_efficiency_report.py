@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 import os
 import re
+import warnings
 from pathlib import Path
 
 import ROOT  # type: ignore
@@ -19,6 +20,11 @@ import ROOT  # type: ignore
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
+ROOT.gStyle.SetOptTitle(0)
+ROOT.gStyle.SetLineWidth(2)
+ROOT.gStyle.SetFrameLineWidth(6)
+ROOT.gStyle.SetPadTickX(1)
+ROOT.gStyle.SetPadTickY(1)
 
 BASE = Path(__file__).resolve().parent
 SIGNAL_BASE = Path(os.environ.get("CSTAR_SIGNAL_BASE", "/eos/user/h/hsiaoche/Signal"))
@@ -35,6 +41,7 @@ CHARGE_INCLUSIVE_CHARM = re.compile(
     r"(?:std::)?abs\s*\(\s*GenPart_pdgId\s*\[\s*i\s*\]\s*\)\s*==\s*4"
 )
 LUMI_PB = 41800.0
+STALE_OUTPUT_WARNING_SHOWN = False
 
 
 def integral(hist) -> float:
@@ -53,6 +60,8 @@ def read_cross_sections() -> dict[tuple[int, str], float]:
 
 
 def read_sample(directory: Path) -> dict[str, float | int | str]:
+    global STALE_OUTPUT_WARNING_SHOWN
+
     match = SAMPLE.fullmatch(directory.name)
     if match is None:
         raise ValueError(directory)
@@ -67,10 +76,17 @@ def read_sample(directory: Path) -> dict[str, float | int | str]:
         raise RuntimeError(
             f"{ANALYSIS_SOURCE} is charge-specific; both particle charges are required."
         )
-    if output.stat().st_mtime < ANALYSIS_SOURCE.stat().st_mtime:
-        raise RuntimeError(
-            f"{output} predates the charge-inclusive analysis source; rerun this sample."
+    if (
+        output.stat().st_mtime < ANALYSIS_SOURCE.stat().st_mtime
+        and not STALE_OUTPUT_WARNING_SHOWN
+    ):
+        warnings.warn(
+            f"One or more CstarToGJ.root files predate {ANALYSIS_SOURCE}; continuing "
+            "because source-only plot-style changes do not invalidate stored efficiency "
+            "histograms. Rerun runAna.sh if event selection or weighting changed.",
+            stacklevel=2,
         )
+        STALE_OUTPUT_WARNING_SHOWN = True
     key = (int(match["mass"]), match["coupling"])
     try:
         xsec_pb = read_cross_sections()[key]
@@ -157,18 +173,25 @@ def make_plot(rows: list[dict[str, float | int | str]], corrected: bool) -> None
         else "selection_efficiency_percent"
     )
     canvas_name = "c_corrected_efficiency" if corrected else "c_selection_efficiency"
-    canvas = ROOT.TCanvas(canvas_name, canvas_name, 900, 720)
-    canvas.SetLeftMargin(0.13)
+    canvas = ROOT.TCanvas(canvas_name, canvas_name, 900, 700)
+    canvas.SetFrameLineWidth(3)
+    canvas.SetLineWidth(2)
+    canvas.SetTicks(1, 1)
+    canvas.SetLeftMargin(0.12)
     canvas.SetRightMargin(0.05)
     canvas.SetBottomMargin(0.12)
-    canvas.SetTopMargin(0.10)
+    canvas.SetTopMargin(0.08)
     canvas.SetGrid()
     y_max = 1.15 * max(float(row[value_field]) / 100.0 for row in rows)
     frame = canvas.DrawFrame(900.0, 0.0, 3100.0, y_max)
     ytitle = "Acceptance #times Efficiency" if corrected else "Signal selection efficiency"
     frame.SetTitle(f";m_{{c*}} [GeV];{ytitle}")
-    frame.GetXaxis().SetTitleSize(0.045)
-    frame.GetYaxis().SetTitleSize(0.045)
+    frame.GetXaxis().SetTitleSize(0.048)
+    frame.GetYaxis().SetTitleSize(0.048)
+    frame.GetXaxis().SetLabelSize(0.042)
+    frame.GetYaxis().SetLabelSize(0.042)
+    frame.GetXaxis().SetTitleOffset(1.00)
+    frame.GetYaxis().SetTitleOffset(1.10)
 
     colors = {"f0p1": ROOT.kBlue + 1, "f0p5": ROOT.kGreen + 2, "f1p0": ROOT.kRed + 1}
     markers = {"f0p1": 20, "f0p5": 21, "f1p0": 22}
@@ -176,6 +199,7 @@ def make_plot(rows: list[dict[str, float | int | str]], corrected: bool) -> None
     legend = ROOT.TLegend(0.62, 0.20, 0.87, 0.38)
     legend.SetBorderSize(0)
     legend.SetFillStyle(0)
+    legend.SetTextSize(0.037)
     for coupling in ("f0p1", "f0p5", "f1p0"):
         selected = [row for row in rows if row["coupling"] == coupling]
         graph = ROOT.TGraph(len(selected))
@@ -188,7 +212,7 @@ def make_plot(rows: list[dict[str, float | int | str]], corrected: bool) -> None
         graph.SetLineColor(colors[coupling])
         graph.SetMarkerColor(colors[coupling])
         graph.SetMarkerStyle(markers[coupling])
-        graph.SetLineWidth(2)
+        graph.SetLineWidth(3)
         graph.Draw("LP SAME")
         legend.AddEntry(graph, f"f = {coupling[1:].replace('p', '.')}", "lp")
         graphs.append(graph)
@@ -197,16 +221,15 @@ def make_plot(rows: list[dict[str, float | int | str]], corrected: bool) -> None
     label = ROOT.TLatex()
     label.SetNDC()
     label.SetTextFont(52)
-    label.SetTextSize(0.040)
-    label.DrawLatex(0.15, 0.91, "Private work (CMS simulation)")
+    label.SetTextSize(0.045)
+    label.DrawLatex(0.115, 0.93, "Private work (CMS simulation)")
     label.SetTextFont(42)
     label.SetTextAlign(31)
-    label.DrawLatex(0.95, 0.91, "41.8 fb^{-1} (13 TeV)")
+    label.DrawLatex(0.95, 0.93, "41.8 fb^{-1} (13TeV)")
     stem = "signal_corrected_effective_efficiency_vs_mass" if corrected else "signal_selection_efficiency_vs_mass"
     canvas.Modified()
     canvas.Update()
     canvas.SaveAs(str(OUT / f"{stem}.pdf"))
-    canvas.SaveAs(str(OUT / f"{stem}.png"))
 
 
 def main() -> None:

@@ -15,6 +15,7 @@
 #include "TPaveText.h"
 #include "TH1.h"
 #include "TROOT.h"
+#include "TStyle.h"
 #include "TSystem.h"
 
 #include <algorithm>
@@ -28,10 +29,9 @@ using namespace RooFit;
 
 namespace {
 
-// Use coarse binning only when drawing the fitted templates.  This matches the
-// approximately 25 points used in Figure 67 of AN2019_267_v10 and keeps the
-// markers readable.  The DSCB fit itself still uses the original RooDataHist.
-constexpr int kPlotBins = 25;
+// Use fixed 30 GeV bins only when drawing the fitted templates.  The DSCB fit
+// itself still uses the original RooDataHist binning.
+constexpr double kPlotBinWidth = 30.0;
 
 struct TemplateSpec {
     const char *histName;
@@ -90,19 +90,34 @@ void saveFitPlot(RooRealVar &x,
                  const TString &outputDirectory)
 {
     TCanvas canvas((std::string("c_fit_") + spec.histName).c_str(),
-                   Form("DSCB Fit %s", spec.label), 800, 600);
-    canvas.SetLeftMargin(0.13);
+                   Form("DSCB Fit %s", spec.label), 900, 700);
+    canvas.SetFrameLineWidth(3);
+    canvas.SetLineWidth(2);
+    canvas.SetTicks(1, 1);
+    canvas.SetLeftMargin(0.12);
     canvas.SetRightMargin(0.05);
     canvas.SetBottomMargin(0.12);
-    canvas.SetTopMargin(0.10);
+    canvas.SetTopMargin(0.08);
+
+    // Use the largest symmetric interval around the tested mass that remains
+    // inside the fit range and consists entirely of 30 GeV bins.
+    const double availableHalfWidth =
+        std::min(signalMass - xminFit, xmaxFit - signalMass);
+    const int halfPlotBins =
+        static_cast<int>(std::floor(availableHalfWidth / kPlotBinWidth));
+    const int plotBins = 2 * halfPlotBins;
+    const double displayHalfWidth = halfPlotBins * kPlotBinWidth;
+    const double displayMin = signalMass - displayHalfWidth;
+    const double displayMax = signalMass + displayHalfWidth;
 
     // Thesis-style plots use compact in-frame annotations rather than a title
     // above the plotting area.
     // RooFit treats Title("") as a request for its automatic "A RooPlot of"
     // title. A single blank character suppresses that fallback visibly.
-    RooPlot *frame = x.frame(Range("fitRange"), Bins(kPlotBins), Title(" "));
+    RooPlot *frame = x.frame(Range(displayMin, displayMax),
+                             Bins(plotBins), Title(" "));
     data.plotOn(frame, Name("data"),
-                Binning(kPlotBins),
+                Binning(plotBins),
                 DataError(RooAbsData::SumW2),
                 MarkerStyle(20),
                 MarkerSize(0.8),
@@ -113,17 +128,17 @@ void saveFitPlot(RooRealVar &x,
                 Range("fitRange"),
                 NormRange("fitRange"),
                 LineColor(kRed),
-                LineWidth(2));
+                LineWidth(3));
 
     frame->GetXaxis()->SetTitle("m_{#gamma j} [GeV]");
-    frame->GetYaxis()->SetTitle("Expected events / bin");
-    // Keep the tested mass at the horizontal center, as in Figure 67 of the
-    // analysis note.  Use the largest symmetric interval contained in the fit
-    // range so no extrapolated region is shown.
-    const double displayHalfWidth =
-        std::min(signalMass - xminFit, xmaxFit - signalMass);
-    frame->GetXaxis()->SetRangeUser(signalMass - displayHalfWidth,
-                                    signalMass + displayHalfWidth);
+    frame->GetYaxis()->SetTitle("Expected events / 30 GeV");
+    frame->GetXaxis()->SetTitleSize(0.048);
+    frame->GetYaxis()->SetTitleSize(0.048);
+    frame->GetXaxis()->SetLabelSize(0.042);
+    frame->GetYaxis()->SetLabelSize(0.042);
+    frame->GetXaxis()->SetTitleOffset(1.00);
+    frame->GetYaxis()->SetTitleOffset(1.10);
+    frame->GetXaxis()->SetRangeUser(displayMin, displayMax);
     frame->SetMinimum(0.0);
     frame->Draw();
 
@@ -148,21 +163,24 @@ void saveFitPlot(RooRealVar &x,
     massLabel.SetNDC();
     massLabel.SetTextFont(42);
     massLabel.SetTextAlign(31);
-    massLabel.SetTextSize(0.04);
+    massLabel.SetTextSize(0.045);
     massLabel.DrawLatex(0.88, 0.82,
                         Form("c* = %.1f TeV", signalMass / 1000.0));
 
     const TString plotName = gSystem->ConcatFileName(
         outputDirectory,
-        (std::string("DSCB_fit_paramSyst_") + spec.histName + ".png").c_str());
+        (std::string("DSCB_fit_paramSyst_") + spec.histName + ".pdf").c_str());
         {
             gPad->Update();
             if (auto *statsBox = gPad->GetPrimitive("stats")) statsBox->Delete();
             TLatex privateWorkLabel;
             privateWorkLabel.SetNDC();
             privateWorkLabel.SetTextFont(52);
-            privateWorkLabel.SetTextSize(0.035);
-            privateWorkLabel.DrawLatex(0.15, 0.91, "Private work (CMS simulation)");
+            privateWorkLabel.SetTextSize(0.045);
+            privateWorkLabel.DrawLatex(0.12, 0.93, "Private work (CMS simulation)");
+            privateWorkLabel.SetTextFont(42);
+            privateWorkLabel.SetTextAlign(31);
+            privateWorkLabel.DrawLatex(0.95, 0.93, "41.8 fb^{-1} (13TeV)");
         }
     canvas.SaveAs(plotName);
     delete frame;
@@ -277,6 +295,14 @@ void produce_signal_DSCB_workspace_paramSyst(
     int signalMass = 1000)
 {
     gROOT->SetBatch(kTRUE);
+    gStyle->SetOptStat(0);
+    gStyle->SetOptTitle(0);
+    gStyle->SetLineWidth(2);
+    gStyle->SetFrameLineWidth(3);
+    gStyle->SetTitleSize(0.048, "XY");
+    gStyle->SetLabelSize(0.042, "XY");
+    gStyle->SetPadTickX(1);
+    gStyle->SetPadTickY(1);
 
     const TString outputDirectory = gSystem->DirName(outputName);
     gSystem->mkdir(outputDirectory, true);

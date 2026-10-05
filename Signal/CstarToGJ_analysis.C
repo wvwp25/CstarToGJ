@@ -28,11 +28,14 @@
 //{{{
 void SetCMSStyle(){
     gStyle->SetOptStat(0);   // no stat box
-    gStyle->SetTitleFontSize(0.05);
+    gStyle->SetOptTitle(0);  // no automatic ROOT histogram title
+    gStyle->SetTitleFontSize(0.048);
     gStyle->SetLineWidth(2);
-    gStyle->SetFrameLineWidth(2);
-    gStyle->SetLabelSize(0.045,"XY");
-    gStyle->SetTitleSize(0.05,"XY");
+    gStyle->SetFrameLineWidth(3);
+    gStyle->SetLabelSize(0.048,"XY");
+    gStyle->SetTitleSize(0.048,"XY");
+    gStyle->SetPadTickX(1);
+    gStyle->SetPadTickY(1);
     gStyle->SetPadTopMargin(0.08);
     gStyle->SetPadBottomMargin(0.12);
     gStyle->SetPadLeftMargin(0.12);
@@ -43,7 +46,7 @@ void SetCMSStyle(){
     gStyle->SetStatH(0.15);   // height
 
 }//void SetCMSStyle()
-void CMS_label(double x = 0.08, double y = 0.88,
+void CMS_label(double = 0.12, double = 0.93,
         const char *text = "Private work (CMS simulation)",
         double lumi_fb = 41.8, double sqrts = 13.0)
 {
@@ -51,12 +54,13 @@ void CMS_label(double x = 0.08, double y = 0.88,
     latex.SetNDC();
     latex.SetTextSize(0.045);
     latex.SetTextFont(52);  // italic for the private-work label
-    latex.DrawLatex(x, y, text); 
+    latex.DrawLatex(0.12, 0.93, text);
 
     latex.SetTextFont(42);  // regular font
     TString lumiText = Form("%.1f fb^{-1} (%g TeV)", lumi_fb, sqrts);
-    latex.SetTextSize(0.04);
-    latex.DrawLatex(0.75, 0.94, lumiText);
+    latex.SetTextAlign(31);
+    latex.SetTextSize(0.045);
+    latex.DrawLatex(0.95, 0.93, lumiText);
 }//void CMS_label
 
 //}}}
@@ -104,33 +108,33 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
 
     //Histograms
     //{{{
-    TH1F *hM_gen   = new TH1F("hM_gen",   "GEN M(#gamma + jet);M^{GEN}_{#gamma j} (GeV);Events",   500, 0.,  3500.);
-    TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events", 100, 500,  3500);
-    TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1F *hM_gen   = new TH1F("hM_gen",   "GEN M(#gamma + jet);M^{GEN}_{#gamma j} (GeV);Events / 7 GeV",   500, 0.,  3500.);
+    TH1F *h_M_cstar = new TH1F("h_m_cstar", "Mass of C*; M_{C*} [GeV]; Events / 30 GeV", 100, 500,  3500);
+    TH1F *hM_reco_selected = new TH1F("hM_reco_selected", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
 
-    TH1F *hPhoton_pt = new TH1F("hPhoton_pT", "Photon p_{T};p_{T}^{photon} (GeV);Events", 500, 0., 1500.);
-    TH1F *hJet_pt = new TH1F("hJet_pT", "Jet p_{T};p_{T}^{jet} (GeV);Events", 500, 0., 1500.);
+    TH1F *hPhoton_pt = new TH1F("hPhoton_pT", "Photon p_{T};p_{T}^{photon} (GeV);Events / 3 GeV", 500, 0., 1500.);
+    TH1F *hJet_pt = new TH1F("hJet_pT", "Jet p_{T};p_{T}^{jet} (GeV);Events / 3 GeV", 500, 0., 1500.);
 
     // -----------------------------
     // Central + nuisance histograms
     // -----------------------------
-    TH1D *h_sig        = new TH1D("h_sig",        "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
-    TH1D *h_sig_PUUp   = new TH1D("h_sig_PUUp",   "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
-    TH1D *h_sig_PUDown = new TH1D("h_sig_PUDown", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
-    TH1D *h_sig_JERUp  = new TH1D("h_sig_JERUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
-    TH1D *h_sig_JERDown= new TH1D("h_sig_JERDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
-    TH1D *h_sig_JESUp  = new TH1D("h_sig_JESUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
-    TH1D *h_sig_JESDown= new TH1D("h_sig_JESDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig        = new TH1D("h_sig",        "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
+    TH1D *h_sig_PUUp   = new TH1D("h_sig_PUUp",   "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
+    TH1D *h_sig_PUDown = new TH1D("h_sig_PUDown", "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
+    TH1D *h_sig_JERUp  = new TH1D("h_sig_JERUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
+    TH1D *h_sig_JERDown= new TH1D("h_sig_JERDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
+    TH1D *h_sig_JESUp  = new TH1D("h_sig_JESUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
+    TH1D *h_sig_JESDown= new TH1D("h_sig_JESDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
     TH1D *hPU_MC = new TH1D("hPU_MC", "MC PU;True interactions;Events", 100, 0, 100);
 
-    TH1D *h_sig_PERUp  = new TH1D("h_sig_PERUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
-    TH1D *h_sig_PERDown= new TH1D("h_sig_PERDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
-    TH1D *h_sig_PESUp  = new TH1D("h_sig_PESUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
-    TH1D *h_sig_PESDown= new TH1D("h_sig_PESDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_PERUp  = new TH1D("h_sig_PERUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
+    TH1D *h_sig_PERDown= new TH1D("h_sig_PERDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
+    TH1D *h_sig_PESUp  = new TH1D("h_sig_PESUp",  "RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
+    TH1D *h_sig_PESDown= new TH1D("h_sig_PESDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
 
-    TH1D *h_sig_CTagUp   = new TH1D("h_sig_CTagUp","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_CTagUp   = new TH1D("h_sig_CTagUp","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
 
-    TH1D *h_sig_CTagDown = new TH1D("h_sig_CTagDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events", 500, 0.,  3500.);
+    TH1D *h_sig_CTagDown = new TH1D("h_sig_CTagDown","RECO M(#gamma + jet);M^{RECO}_{#gamma j} (GeV);Events / 7 GeV", 500, 0.,  3500.);
 
 
     //}}}
@@ -638,6 +642,9 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
     }//jentry
 
     SetCMSStyle();
+    // The histograms were constructed before the event loop; propagate the
+    // common 0.048 axis-title and tick-label sizes to those existing objects.
+    gROOT->ForceStyle();
 
     //weighted_yield_summary
     //{{{
@@ -699,129 +706,129 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
     gROOT->SetBatch(kTRUE); // run without opening any windows
 
 
-    TCanvas *c1 = new TCanvas("c1", "Invariant Mass Gen", 600, 400);
+    TCanvas *c1 = new TCanvas("c1", "Invariant Mass Gen", 900, 700);
     hM_gen->Draw("HIST");
     hM_gen->GetXaxis()->SetTitleOffset(1.4);
     hM_gen->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c1->SaveAs(artifactPath("Invariant_Mass_gen.png"));
+    c1->SaveAs(artifactPath("Invariant_Mass_gen.pdf"));
 
 
-    TCanvas *c3 = new TCanvas("c3", "Mass of C*", 600, 400);
+    TCanvas *c3 = new TCanvas("c3", "Mass of C*", 900, 700);
     h_M_cstar->Draw("HIST");
     h_M_cstar->GetXaxis()->SetTitleOffset(1.4);    // lower x-title
     h_M_cstar->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c3->SaveAs(artifactPath("Mass_Cstar.png"));
+    c3->SaveAs(artifactPath("Mass_Cstar.pdf"));
 
 
-    TCanvas *c4 = new TCanvas("c4", "Photon_pT", 600, 400);
+    TCanvas *c4 = new TCanvas("c4", "Photon_pT", 900, 700);
     hPhoton_pt->Draw("HIST");
     hPhoton_pt->GetXaxis()->SetTitleOffset(1.4);    // lower x-title
     hPhoton_pt->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c4->SaveAs(artifactPath("Photon_pT.png"));
+    c4->SaveAs(artifactPath("Photon_pT.pdf"));
 
 
-    TCanvas *c5 = new TCanvas("c5", "Jet_pT", 600, 400);
+    TCanvas *c5 = new TCanvas("c5", "Jet_pT", 900, 700);
     hJet_pt->Draw("HIST");
     hJet_pt->GetXaxis()->SetTitleOffset(1.4);    // lower x-title
     hJet_pt->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c5->SaveAs(artifactPath("Jet_pT.png"));
+    c5->SaveAs(artifactPath("Jet_pT.pdf"));
 
-    TCanvas *c6 = new TCanvas("c6", "Invariant Mass Reco", 600, 400);
+    TCanvas *c6 = new TCanvas("c6", "Invariant Mass Reco", 900, 700);
     hM_reco_selected->Draw("HIST");
     hM_reco_selected->GetXaxis()->SetTitleOffset(1.4);    // lower x-title
     hM_reco_selected->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c6->SaveAs(artifactPath("Invariant_Mass_reco_selected.png"));
+    c6->SaveAs(artifactPath("Invariant_Mass_reco_selected.pdf"));
 
-    TCanvas *c7 = new TCanvas("c7", "Invariant Mass Reco PU Nom", 600, 400);
+    TCanvas *c7 = new TCanvas("c7", "Invariant Mass Reco PU Nom", 900, 700);
     h_sig->Draw("HIST");
     h_sig->GetXaxis()->SetTitleOffset(1.4);
     h_sig->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c7->SaveAs(artifactPath("Invariant_Mass_PU_nom.png"));
+    c7->SaveAs(artifactPath("Invariant_Mass_PU_nom.pdf"));
 
-    TCanvas *c8 = new TCanvas("c8", "Invariant Mass Reco PU Up", 600, 400);
+    TCanvas *c8 = new TCanvas("c8", "Invariant Mass Reco PU Up", 900, 700);
     h_sig_PUUp->Draw("HIST");
     h_sig_PUUp->GetXaxis()->SetTitleOffset(1.4);
     h_sig_PUUp->GetXaxis()->SetLabelOffset(0.02);
     h_sig_PUUp->SetStats(0);
     CMS_label(0.18, 0.87);
-    c8->SaveAs(artifactPath("Invariant_Mass_PU_up.png"));
+    c8->SaveAs(artifactPath("Invariant_Mass_PU_up.pdf"));
 
-    TCanvas *c9 = new TCanvas("c9", "Invariant Mass Reco PU Down", 600, 400);
+    TCanvas *c9 = new TCanvas("c9", "Invariant Mass Reco PU Down", 900, 700);
     h_sig_PUDown->Draw("HIST");
     h_sig_PUDown->GetXaxis()->SetTitleOffset(1.4);
     h_sig_PUDown->GetXaxis()->SetLabelOffset(0.02);
     h_sig_PUDown->SetStats(0);
     CMS_label(0.18, 0.87);
-    c9->SaveAs(artifactPath("Invariant_Mass_PU_down.png"));
+    c9->SaveAs(artifactPath("Invariant_Mass_PU_down.pdf"));
 
-    TCanvas *c10 = new TCanvas("c8", "Invariant Mass Reco JES Up", 600, 400);
+    TCanvas *c10 = new TCanvas("c8", "Invariant Mass Reco JES Up", 900, 700);
     h_sig_JESUp->Draw("HIST");
     h_sig_JESUp->GetXaxis()->SetTitleOffset(1.4);
     h_sig_JESUp->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c10->SaveAs(artifactPath("Invariant_Mass_JES_up.png"));
+    c10->SaveAs(artifactPath("Invariant_Mass_JES_up.pdf"));
 
-    TCanvas *c11 = new TCanvas("c9", "Invariant Mass Reco JES Down", 600, 400);
+    TCanvas *c11 = new TCanvas("c9", "Invariant Mass Reco JES Down", 900, 700);
     h_sig_JESDown->Draw("HIST");
     h_sig_JESDown->GetXaxis()->SetTitleOffset(1.4);
     h_sig_JESDown->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c11->SaveAs(artifactPath("Invariant_Mass_JES_down.png"));
+    c11->SaveAs(artifactPath("Invariant_Mass_JES_down.pdf"));
 
-    TCanvas *c12 = new TCanvas("c8", "Invariant Mass Reco JER Up", 600, 400);
+    TCanvas *c12 = new TCanvas("c8", "Invariant Mass Reco JER Up", 900, 700);
     h_sig_JERUp->Draw("HIST");
     h_sig_JERUp->GetXaxis()->SetTitleOffset(1.4);
     h_sig_JERUp->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c12->SaveAs(artifactPath("Invariant_Mass_JER_up.png"));
+    c12->SaveAs(artifactPath("Invariant_Mass_JER_up.pdf"));
 
-    TCanvas *c13 = new TCanvas("c9", "Invariant Mass Reco JER Down", 600, 400);
+    TCanvas *c13 = new TCanvas("c9", "Invariant Mass Reco JER Down", 900, 700);
     h_sig_JERDown->Draw("HIST");
     h_sig_JERDown->GetXaxis()->SetTitleOffset(1.4);
     h_sig_JERDown->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c13->SaveAs(artifactPath("Invariant_Mass_JER_down.png"));
+    c13->SaveAs(artifactPath("Invariant_Mass_JER_down.pdf"));
 
-    TCanvas *c14 = new TCanvas("c8", "Invariant Mass Reco PES Up", 600, 400);
+    TCanvas *c14 = new TCanvas("c8", "Invariant Mass Reco PES Up", 900, 700);
     h_sig_PESUp->Draw("HIST");
     h_sig_PESUp->GetXaxis()->SetTitleOffset(1.4);
     h_sig_PESUp->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c14->SaveAs(artifactPath("Invariant_Mass_PES_up.png"));
+    c14->SaveAs(artifactPath("Invariant_Mass_PES_up.pdf"));
 
-    TCanvas *c15 = new TCanvas("c9", "Invariant Mass Reco PES Down", 600, 400);
+    TCanvas *c15 = new TCanvas("c9", "Invariant Mass Reco PES Down", 900, 700);
     h_sig_PESDown->Draw("HIST");
     h_sig_PESDown->GetXaxis()->SetTitleOffset(1.4);
     h_sig_PESDown->GetXaxis()->SetLabelOffset(0.02);
     CMS_label(0.18, 0.87);
-    c15->SaveAs(artifactPath("Invariant_Mass_PES_down.png"));
+    c15->SaveAs(artifactPath("Invariant_Mass_PES_down.pdf"));
 
-    TCanvas *c16 = new TCanvas("c16", "Invariant Mass Reco CTag Up", 600, 400);
+    TCanvas *c16 = new TCanvas("c16", "Invariant Mass Reco CTag Up", 900, 700);
     h_sig_CTagUp->Draw("HIST");
     h_sig_CTagUp->GetXaxis()->SetTitleOffset(1.4);
     h_sig_CTagUp->GetXaxis()->SetLabelOffset(0.02);
     h_sig_CTagUp->SetStats(0);
     CMS_label(0.18, 0.87);
-    c16->SaveAs(artifactPath("Invariant_Mass_CTag_up.png"));
+    c16->SaveAs(artifactPath("Invariant_Mass_CTag_up.pdf"));
 
-    TCanvas *c17 = new TCanvas("c17", "Invariant Mass Reco CTag Down", 600, 400);
+    TCanvas *c17 = new TCanvas("c17", "Invariant Mass Reco CTag Down", 900, 700);
     h_sig_CTagDown->Draw("HIST");
     h_sig_CTagDown->GetXaxis()->SetTitleOffset(1.4);
     h_sig_CTagDown->GetXaxis()->SetLabelOffset(0.02);
     h_sig_CTagDown->SetStats(0);
     CMS_label(0.18, 0.87);
-    c17->SaveAs(artifactPath("Invariant_Mass_CTag_down.png"));
+    c17->SaveAs(artifactPath("Invariant_Mass_CTag_down.pdf"));
 
     //PU JER JES C-tag comparison plots
     //{{{
 
-    TCanvas *c20 = new TCanvas("c10", "PU comparison", 600, 400);
+    TCanvas *c20 = new TCanvas("c10", "PU comparison", 900, 700);
 
     h_sig_PUDown->SetLineColor(kBlue);
     h_sig_PUDown->SetLineWidth(1);
@@ -848,13 +855,13 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
     leg->SetBorderSize(0);
     leg->Draw();
 
-    c20->SaveAs(artifactPath("Invariant_Mass_PU_compare.png"));
+    c20->SaveAs(artifactPath("Invariant_Mass_PU_compare.pdf"));
 
     //===============
     //PU comparison
     //===============
 
-    TCanvas *cPUcomp = new TCanvas("cPUcomp", "PU comparison", 700, 700);
+    TCanvas *cPUcomp = new TCanvas("cPUcomp", "PU comparison", 900, 900);
 
     // Pads
     TPad *pad1 = new TPad("pad1", "top pad", 0.0, 0.30, 1.0, 1.0);
@@ -868,6 +875,12 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
     pad2->SetBottomMargin(0.30);
     pad2->SetLeftMargin(0.12);
     pad2->SetRightMargin(0.05);
+    pad1->SetFrameLineWidth(3);
+    pad2->SetFrameLineWidth(3);
+    pad1->SetLineWidth(2);
+    pad2->SetLineWidth(2);
+    pad1->SetTicks(1, 1);
+    pad2->SetTicks(1, 1);
 
     pad1->Draw();
     pad2->Draw();
@@ -894,8 +907,10 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
     hMC_plot->SetLineWidth(2);
 
     hData_plot->GetYaxis()->SetTitle("entries / 1.0");
-    hData_plot->GetYaxis()->SetTitleSize(0.05);
-    hData_plot->GetYaxis()->SetLabelSize(0.035);
+    constexpr double topPadTextSize = 0.048 * 700.0 / (0.70 * 900.0);
+    constexpr double ratioPadTextSize = 0.048 * 700.0 / (0.30 * 900.0);
+    hData_plot->GetYaxis()->SetTitleSize(topPadTextSize);
+    hData_plot->GetYaxis()->SetLabelSize(topPadTextSize);
     hData_plot->GetYaxis()->SetTitleOffset(1.1);
 
     hData_plot->GetXaxis()->SetLabelSize(0); // hide x labels on top pad
@@ -932,12 +947,12 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
     hRatio->GetXaxis()->SetTitle("pileup");
 
     hRatio->GetYaxis()->SetNdivisions(505);
-    hRatio->GetYaxis()->SetTitleSize(0.10);
-    hRatio->GetYaxis()->SetLabelSize(0.08);
+    hRatio->GetYaxis()->SetTitleSize(ratioPadTextSize);
+    hRatio->GetYaxis()->SetLabelSize(ratioPadTextSize);
     hRatio->GetYaxis()->SetTitleOffset(0.5);
 
-    hRatio->GetXaxis()->SetTitleSize(0.12);
-    hRatio->GetXaxis()->SetLabelSize(0.10);
+    hRatio->GetXaxis()->SetTitleSize(ratioPadTextSize);
+    hRatio->GetXaxis()->SetLabelSize(ratioPadTextSize);
     hRatio->GetXaxis()->SetTitleOffset(1.0);
 
     hRatio->SetMinimum(0.0);
@@ -950,12 +965,12 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
     line1->SetLineStyle(2);
     line1->Draw();
 
-    cPUcomp->SaveAs(artifactPath("Pileup_Data_vs_MC_ratio.png"));
+    cPUcomp->SaveAs(artifactPath("Pileup_Data_vs_MC_ratio.pdf"));
 
     // =====================
     // JER comparison
     // =====================
-    TCanvas *cJER = new TCanvas("cJER", "JER comparison", 600, 400);
+    TCanvas *cJER = new TCanvas("cJER", "JER comparison", 900, 700);
 
     h_sig_JERDown->SetLineColor(kBlue);
     h_sig_JERDown->SetLineWidth(1);
@@ -978,13 +993,13 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
     legJER->Draw();
 
     CMS_label(0.18,0.87);
-    cJER->SaveAs(artifactPath("Invariant_Mass_JER_compare.png"));
+    cJER->SaveAs(artifactPath("Invariant_Mass_JER_compare.pdf"));
 
 
     // =====================
     // JES comparison
     // =====================
-    TCanvas *cJES = new TCanvas("cJES", "JES comparison", 600, 400);
+    TCanvas *cJES = new TCanvas("cJES", "JES comparison", 900, 700);
 
     h_sig_JESDown->SetLineColor(kBlue);
     h_sig_JESDown->SetLineWidth(1);
@@ -1007,12 +1022,12 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
     legJES->Draw();
 
     CMS_label(0.18,0.87);
-    cJES->SaveAs(artifactPath("Invariant_Mass_JES_compare.png"));
+    cJES->SaveAs(artifactPath("Invariant_Mass_JES_compare.pdf"));
 
     // =====================
     // JC-tag comparison
     // =====================
-    TCanvas *cCTag = new TCanvas("cCTag", "CTag comparison", 600, 400);
+    TCanvas *cCTag = new TCanvas("cCTag", "CTag comparison", 900, 700);
 
     h_sig_CTagDown->SetLineColor(kBlue);
     h_sig->SetLineColor(kBlack);
@@ -1030,7 +1045,7 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
     legCTag->Draw();
 
     CMS_label(0.18,0.87);
-    cCTag->SaveAs(artifactPath("Invariant_Mass_CTag_compare.png"));
+    cCTag->SaveAs(artifactPath("Invariant_Mass_CTag_compare.pdf"));
 
     //}}}
 

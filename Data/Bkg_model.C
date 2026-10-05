@@ -66,11 +66,13 @@ void drawPrivateLabel(double luminosityFb, bool poster) {
   TLatex label;
   label.SetNDC();
   label.SetTextFont(52);
-  label.SetTextSize(poster ? 0.045 : 0.035);
+  // The label is drawn in the 70%-height top pad.  A size of 0.050 there
+  // matches 0.045 on the 900x700 poster Brazil canvas.
+  label.SetTextSize(poster ? 0.050 : 0.035);
   label.DrawLatex(0.12, 0.90, "Private work (CMS data)");
   label.SetTextFont(42);
   label.SetTextAlign(31);
-  label.SetTextSize(poster ? 0.045 : 0.035);
+  label.SetTextSize(poster ? 0.050 : 0.035);
   label.DrawLatex(0.95, 0.90,
                   Form("%.1f fb^{-1} (13TeV)", luminosityFb));
 }
@@ -256,15 +258,16 @@ void Bkg_model(int signalMass = 1000,
 
   // Figure 59 uses roughly 50 visible points across the full mass range.  The
   // source histogram has 4 GeV bins, so combine 20 bins (80 GeV) for display
-  // only.  Dividing by the group size keeps the original events-per-4-GeV
-  // convention and therefore the normalization of backgroundFit unchanged.
+  // only.  Keep the rebinned sums so the vertical scale is events per actual
+  // displayed bin; a separate plotting function is scaled consistently below.
   // Use twice as many visible bins in the poster version (40 GeV rather than
   // 80 GeV) so the data markers form a denser distribution.
   const int displayRebin = poster ? 10 : 20;
+  const double sourceBinWidth = data->GetXaxis()->GetBinWidth(1);
   TH1 *displayData = dynamic_cast<TH1 *>(data->Clone("hM_display"));
   displayData->SetDirectory(nullptr);
   displayData->Rebin(displayRebin);
-  displayData->Scale(1.0 / displayRebin);
+  const double displayBinWidth = displayData->GetXaxis()->GetBinWidth(1);
   for (int bin = 1; bin <= displayData->GetNbinsX(); ++bin) {
     const double lowEdge = displayData->GetXaxis()->GetBinLowEdge(bin);
     const double highEdge = displayData->GetXaxis()->GetBinUpEdge(bin);
@@ -288,7 +291,7 @@ void Bkg_model(int signalMass = 1000,
         (highEdge > excludedLow && lowEdge < excludedHigh)) continue;
 
     const double prediction =
-        backgroundFit.Integral(lowEdge, highEdge) / (highEdge - lowEdge);
+        backgroundFit.Integral(lowEdge, highEdge) / sourceBinWidth;
     if (prediction <= 0.0) continue;
 
     const double value = displayData->GetBinContent(bin);
@@ -324,6 +327,10 @@ void Bkg_model(int signalMass = 1000,
   canvas.SetLineWidth(poster ? 2 : 1);
   TPad topPad("topPad", "data and fit", 0.0, 0.30, 1.0, 1.0);
   TPad residualPad("residualPad", "fractional residual", 0.0, 0.0, 1.0, 0.30);
+  // Match the poster Brazil plots.  Text sizes are pad-relative, so compensate
+  // for the 70/30 split to retain the same apparent size as on a 900x700 canvas.
+  constexpr double posterTopTextSize = 0.048 * 700.0 / (0.70 * 900.0);
+  constexpr double posterResidualTextSize = 0.048 * 700.0 / (0.30 * 900.0);
   topPad.SetLeftMargin(0.12);
   topPad.SetRightMargin(0.05);
   topPad.SetTopMargin(0.11);
@@ -333,6 +340,12 @@ void Bkg_model(int signalMass = 1000,
   residualPad.SetRightMargin(0.05);
   residualPad.SetTopMargin(0.03);
   residualPad.SetBottomMargin(0.32);
+  topPad.SetFrameLineWidth(poster ? 3 : 1);
+  residualPad.SetFrameLineWidth(poster ? 3 : 1);
+  topPad.SetLineWidth(poster ? 2 : 1);
+  residualPad.SetLineWidth(poster ? 2 : 1);
+  topPad.SetTicks(1, 1);
+  residualPad.SetTicks(1, 1);
   topPad.Draw();
   residualPad.Draw();
 
@@ -344,11 +357,11 @@ void Bkg_model(int signalMass = 1000,
   const double yMaximum = std::max(10.0, 1.8 * displayData->GetMaximum());
   TH1 *frame = topPad.DrawFrame(fitMin, yMinimum, plotMax, yMaximum);
   frame->SetTitle("");
-  frame->GetYaxis()->SetTitle("Events");
+  frame->GetYaxis()->SetTitle(Form("Events / %.0f GeV", displayBinWidth));
   frame->GetXaxis()->SetLabelSize(0.0);
   if (poster) {
-    frame->GetYaxis()->SetTitleSize(0.055);
-    frame->GetYaxis()->SetLabelSize(0.055);
+    frame->GetYaxis()->SetTitleSize(posterTopTextSize);
+    frame->GetYaxis()->SetLabelSize(posterTopTextSize);
     frame->GetYaxis()->SetTitleOffset(0.95);
   }
   displayData->SetMarkerStyle(20);
@@ -356,9 +369,13 @@ void Bkg_model(int signalMass = 1000,
   displayData->SetMarkerColor(kBlack);
   displayData->SetLineColor(kBlack);
   displayData->Draw("E1 SAME");
-  backgroundFit.SetLineColor(kRed + 1);
-  backgroundFit.SetLineWidth(2);
-  backgroundFit.Draw("SAME");
+  TF1 displayBackground(backgroundFit);
+  displayBackground.SetName("bkgFit_display");
+  displayBackground.SetParameter(
+      0, backgroundFit.GetParameter(0) * displayBinWidth / sourceBinWidth);
+  displayBackground.SetLineColor(kRed + 1);
+  displayBackground.SetLineWidth(2);
+  displayBackground.Draw("SAME");
 
   topPad.Update();
   TLine lowLine(excludedLow, yMinimum, excludedLow, yMaximum);
@@ -374,7 +391,7 @@ void Bkg_model(int signalMass = 1000,
   legend.SetFillStyle(0);
   legend.SetTextSize(poster ? 0.040 : 0.035);
   legend.AddEntry(displayData, "Data (sidebands)", "lep");
-  legend.AddEntry(&backgroundFit, "4-parameter fit", "l");
+  legend.AddEntry(&displayBackground, "4-parameter fit", "l");
   legend.AddEntry(&lowLine, "Excluded signal window", "l");
   legend.Draw();
 
@@ -398,11 +415,11 @@ void Bkg_model(int signalMass = 1000,
   residualFrame->GetYaxis()->SetTitleOffset(0.48);
   residualFrame->GetYaxis()->SetNdivisions(505);
   if (poster) {
-    residualFrame->GetXaxis()->SetTitleSize(0.10);
-    residualFrame->GetXaxis()->SetLabelSize(0.10);
-    residualFrame->GetYaxis()->SetTitleSize(0.085);
-    residualFrame->GetYaxis()->SetLabelSize(0.085);
-    residualFrame->GetYaxis()->SetTitleOffset(0.60);
+    residualFrame->GetXaxis()->SetTitleSize(posterResidualTextSize);
+    residualFrame->GetXaxis()->SetLabelSize(posterResidualTextSize);
+    residualFrame->GetYaxis()->SetTitleSize(posterResidualTextSize);
+    residualFrame->GetYaxis()->SetLabelSize(posterResidualTextSize);
+    residualFrame->GetYaxis()->SetTitleOffset(0.38);
   }
 
   residual.SetMarkerStyle(20);
