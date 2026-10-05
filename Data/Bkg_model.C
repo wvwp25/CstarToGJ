@@ -62,24 +62,26 @@ bool inSidebands(double mass, double fitMin, double fitMax) {
          !(mass > excludedLow && mass < excludedHigh);
 }
 
-void drawPrivateLabel(double luminosityFb) {
+void drawPrivateLabel(double luminosityFb, bool poster) {
   TLatex label;
   label.SetNDC();
   label.SetTextFont(52);
-  label.SetTextSize(0.035);
-  label.DrawLatex(0.14, 0.91, "Private work (CMS data)");
+  label.SetTextSize(poster ? 0.045 : 0.035);
+  label.DrawLatex(0.12, 0.90, "Private work (CMS data)");
   label.SetTextFont(42);
   label.SetTextAlign(31);
-  label.SetTextSize(0.035);
-  label.DrawLatex(0.94, 0.91,
-                  Form("%.1f fb^{-1} (13 TeV)", luminosityFb));
+  label.SetTextSize(poster ? 0.045 : 0.035);
+  label.DrawLatex(0.95, 0.90,
+                  Form("%.1f fb^{-1} (13TeV)", luminosityFb));
 }
 
 }  // namespace
 
 void Bkg_model(int signalMass = 1000,
-                            double fitMin = 700.0,
-                            double fitMax = 3500.0) {
+               double fitMin = 700.0,
+               double fitMax = 3500.0,
+               const char *plotFormat = "png",
+               bool poster = false) {
   // A zero mass is the all-mass mode.  Reuse the common data histogram and
   // run the same independent sideband fit for every tested hypothesis.
   if (signalMass == 0) {
@@ -87,7 +89,7 @@ void Bkg_model(int signalMass = 1000,
                                 2200, 2400, 2600, 2800, 3000};
     for (const int mass : testedMasses) {
       std::cout << "\n===== Background fit for M" << mass << " =====\n";
-      Bkg_model(mass, fitMin, fitMax);
+      Bkg_model(mass, fitMin, fitMax, plotFormat, poster);
     }
     return;
   }
@@ -256,7 +258,9 @@ void Bkg_model(int signalMass = 1000,
   // source histogram has 4 GeV bins, so combine 20 bins (80 GeV) for display
   // only.  Dividing by the group size keeps the original events-per-4-GeV
   // convention and therefore the normalization of backgroundFit unchanged.
-  constexpr int displayRebin = 20;
+  // Use twice as many visible bins in the poster version (40 GeV rather than
+  // 80 GeV) so the data markers form a denser distribution.
+  const int displayRebin = poster ? 10 : 20;
   TH1 *displayData = dynamic_cast<TH1 *>(data->Clone("hM_display"));
   displayData->SetDirectory(nullptr);
   displayData->Rebin(displayRebin);
@@ -312,8 +316,12 @@ void Bkg_model(int signalMass = 1000,
   }
 
   gStyle->SetOptStat(0);
+  gStyle->SetLineWidth(poster ? 2 : 1);
   gROOT->SetBatch(kTRUE);
-  TCanvas canvas("cSimultaneousSidebands", "Simultaneous sideband fit", 700, 700);
+  TCanvas canvas("cSimultaneousSidebands", "Simultaneous sideband fit",
+                 poster ? 900 : 700, poster ? 900 : 700);
+  canvas.SetFrameLineWidth(poster ? 3 : 1);
+  canvas.SetLineWidth(poster ? 2 : 1);
   TPad topPad("topPad", "data and fit", 0.0, 0.30, 1.0, 1.0);
   TPad residualPad("residualPad", "fractional residual", 0.0, 0.0, 1.0, 0.30);
   topPad.SetLeftMargin(0.12);
@@ -338,8 +346,13 @@ void Bkg_model(int signalMass = 1000,
   frame->SetTitle("");
   frame->GetYaxis()->SetTitle("Events");
   frame->GetXaxis()->SetLabelSize(0.0);
+  if (poster) {
+    frame->GetYaxis()->SetTitleSize(0.055);
+    frame->GetYaxis()->SetLabelSize(0.055);
+    frame->GetYaxis()->SetTitleOffset(0.95);
+  }
   displayData->SetMarkerStyle(20);
-  displayData->SetMarkerSize(0.75);
+  displayData->SetMarkerSize(0.85);
   displayData->SetMarkerColor(kBlack);
   displayData->SetLineColor(kBlack);
   displayData->Draw("E1 SAME");
@@ -354,12 +367,12 @@ void Bkg_model(int signalMass = 1000,
   highLine.SetLineStyle(2);
   lowLine.Draw();
   highLine.Draw();
-  drawPrivateLabel(luminosityFb);
+  drawPrivateLabel(luminosityFb, poster);
 
-  TLegend legend(0.63, 0.68, 0.89, 0.84);
+  TLegend legend(0.57, 0.68, 0.89, 0.84);
   legend.SetBorderSize(0);
   legend.SetFillStyle(0);
-  legend.SetTextSize(0.035);
+  legend.SetTextSize(poster ? 0.040 : 0.035);
   legend.AddEntry(displayData, "Data (sidebands)", "lep");
   legend.AddEntry(&backgroundFit, "4-parameter fit", "l");
   legend.AddEntry(&lowLine, "Excluded signal window", "l");
@@ -384,9 +397,16 @@ void Bkg_model(int signalMass = 1000,
   residualFrame->GetYaxis()->SetLabelSize(0.08);
   residualFrame->GetYaxis()->SetTitleOffset(0.48);
   residualFrame->GetYaxis()->SetNdivisions(505);
+  if (poster) {
+    residualFrame->GetXaxis()->SetTitleSize(0.10);
+    residualFrame->GetXaxis()->SetLabelSize(0.10);
+    residualFrame->GetYaxis()->SetTitleSize(0.085);
+    residualFrame->GetYaxis()->SetLabelSize(0.085);
+    residualFrame->GetYaxis()->SetTitleOffset(0.60);
+  }
 
   residual.SetMarkerStyle(20);
-  residual.SetMarkerSize(0.65);
+  residual.SetMarkerSize(0.85);
   residual.SetMarkerColor(kBlack);
   residual.SetLineColor(kBlack);
   residual.Draw("P SAME");
@@ -406,8 +426,8 @@ void Bkg_model(int signalMass = 1000,
   canvas.Modified();
   canvas.Update();
 
-  const TString plotName =
-      Form("Invariant_Mass_gJet_M%d.png", signalMass);
+  const TString plotName = Form("Invariant_Mass_gJet_M%d%s.%s", signalMass,
+                                poster ? "_poster" : "", plotFormat);
   canvas.SaveAs(plotName);
 
   const TString outputName =

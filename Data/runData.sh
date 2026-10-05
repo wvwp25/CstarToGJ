@@ -7,6 +7,7 @@ cmssw_dir="/eos/user/h/hsiaoche/CMSSW_13_3_0"
 input_name="SinglePhoton_Run2017BCDEF-UL2017_MiniAODv2_NanoAODv9-v1_NANOAOD.root"
 build_dir="$data_dir/.rootbuild"
 masses=(1000 1200 1400 1600 1800 2000 2200 2400 2600 2800 3000)
+plot_format="pdf"
 
 usage() {
     echo "Run the 2017 data background workflow."
@@ -74,8 +75,12 @@ fit_mass() {
         die "Missing $data_dir/Run2017BCDEF_BG.root; run $0 -make first"
     [[ -f "/eos/user/h/hsiaoche/Signal/CstarToGJ_M${mass}_f1p0_13TeV_NANOAOD/signal_DSCB_workspace_paramSyst.root" ]] || \
         die "Missing f1p0 signal workspace for M$mass"
-    echo "===== Fitting the M$mass background ====="
-    root_macro "$script_dir/Bkg_model.C+($mass)"
+    echo "===== Fitting the M$mass background (thesis plot) ====="
+    root_macro \
+        "$script_dir/Bkg_model.C+($mass,700.0,3500.0,\"$plot_format\",false)"
+    echo "===== Fitting the M$mass background (poster plot) ====="
+    root_macro \
+        "$script_dir/Bkg_model.C+($mass,700.0,3500.0,\"$plot_format\",true)"
     [[ -f "$data_dir/Run2017BCDEF_BG_M${mass}.root" ]] || \
         die "The fit macro did not create Run2017BCDEF_BG_M${mass}.root"
 }

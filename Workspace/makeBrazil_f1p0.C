@@ -43,8 +43,9 @@ Lim readLim(const std::string& fn){
     return L;
 }
 
-void makeBrazil_f1p0(){
+void makeBrazil_f1p0(const char *plotFormat = "png", bool poster = false){
     gStyle->SetOptStat(0);
+    gStyle->SetLineWidth(poster ? 2 : 1);
     const std::string workDir = "/eos/user/h/hsiaoche/workspace";
 
     std::vector<double> mGeV = {1000,1200,1400,1600,1800,2000,2200,2400,2600,2800,3000};
@@ -118,6 +119,8 @@ void makeBrazil_f1p0(){
     grT->SetLineColor(kRed+1);
 
     auto c = new TCanvas("c","c",900,700);
+    c->SetFrameLineWidth(poster ? 3 : 1);
+    c->SetLineWidth(poster ? 2 : 1);
     c->SetLogy();
     c->SetLeftMargin(0.12);
     c->SetRightMargin(0.05);
@@ -130,6 +133,14 @@ void makeBrazil_f1p0(){
     gr2->SetTitle("");
     gr2->GetXaxis()->SetTitle("Resonance mass [TeV]");
     gr2->GetYaxis()->SetTitle("#sigma #times B [pb]");
+    if (poster) {
+        gr2->GetXaxis()->SetTitleSize(0.048);
+        gr2->GetYaxis()->SetTitleSize(0.048);
+        gr2->GetXaxis()->SetLabelSize(0.048);
+        gr2->GetYaxis()->SetLabelSize(0.048);
+        gr2->GetXaxis()->SetTitleOffset(1.00);
+        gr2->GetYaxis()->SetTitleOffset(1.10);
+    }
     gr2->GetXaxis()->SetLimits(0.8, 3.2);
     gr2->SetMinimum(1e-5);
     gr2->SetMaximum(100);
@@ -140,9 +151,11 @@ void makeBrazil_f1p0(){
     //grO->Draw("LP SAME");
     grT->Draw("L SAME");
 
-    auto leg = new TLegend(0.55,0.62,0.88,0.86);
+    auto leg = poster ? new TLegend(0.48,0.59,0.90,0.82)
+                      : new TLegend(0.55,0.62,0.88,0.86);
     leg->SetBorderSize(0);
     leg->SetFillStyle(0);
+    if (poster) leg->SetTextSize(0.037);
     //leg->AddEntry(grO,"Observed","lp");
     leg->AddEntry(grE,"Expected","l");
     leg->AddEntry(gr1,"Expected #pm 1 std. deviation","f");
@@ -150,13 +163,14 @@ void makeBrazil_f1p0(){
     leg->AddEntry(grT,"Excited quark (f=1.0)","l");
     leg->Draw();
 
-    TLatex lat; lat.SetNDC(true); lat.SetTextFont(52); lat.SetTextSize(0.035);
+    TLatex lat; lat.SetNDC(true); lat.SetTextFont(52); lat.SetTextSize(poster ? 0.045 : 0.035);
     lat.DrawLatex(0.12,0.93,"Private work (CMS simulation)");
     lat.SetTextFont(42);
     lat.SetTextAlign(31);
-    lat.DrawLatex(0.95,0.93,"41.8 fb^{-1} (13 TeV)");
-    lat.SetTextAlign(11);
-    lat.DrawLatex(0.80,0.81,"c* #rightarrow c#gamma");
+    lat.DrawLatex(0.95,0.93,"41.8 fb^{-1} (13TeV)");
+    lat.SetTextAlign(poster ? 31 : 11);
+    lat.DrawLatex(poster ? 0.90 : 0.80,poster ? 0.83 : 0.81,"c* #rightarrow c#gamma");
 
-    c->SaveAs((workDir + "/brazil_sigmaB_f1p0.png").c_str());
+    const std::string suffix = poster ? "_poster" : "";
+    c->SaveAs((workDir + "/brazil_sigmaB_f1p0" + suffix + "." + plotFormat).c_str());
 }

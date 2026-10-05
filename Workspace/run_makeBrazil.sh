@@ -6,7 +6,8 @@ usage() {
 Usage:
   ./run_makeBrazil.sh [f0p1|f0p5|f1p0|all]
 
-Default: all
+Generates both thesis and poster versions in PDF format.
+Default coupling selection: all
 
 Examples:
   ./run_makeBrazil.sh
@@ -17,6 +18,7 @@ USAGE
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 coupling="${1:-all}"
+plot_format="pdf"
 if [ "$#" -gt 1 ]; then
   usage >&2
   exit 2
@@ -31,9 +33,13 @@ run_one() {
     return 1
   fi
 
-  echo "BEGIN makeBrazil ${coup}"
-  root -l -b -q "${macro}"
-  echo "END makeBrazil ${coup}"
+  echo "BEGIN makeBrazil ${coup} (thesis)"
+  root -l -b -q "${macro}(\"${plot_format}\",false)"
+  echo "END makeBrazil ${coup} (thesis)"
+
+  echo "BEGIN makeBrazil ${coup} (poster)"
+  root -l -b -q "${macro}(\"${plot_format}\",true)"
+  echo "END makeBrazil ${coup} (poster)"
 }
 
 case "$coupling" in
