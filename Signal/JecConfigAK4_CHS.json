@@ -1,0 +1,21 @@
+{
+  "2017": {
+    "jercJsonPath": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2017-UL-NanoAODv9/latest/jet_jerc.json.gz",
+    "ApplyOnMC": {
+      "JesNominal": {
+        "tagNameL1FastJet": "Summer19UL17_V5_MC_L1FastJet_AK4PFchs",
+        "tagNameL2Relative": "Summer19UL17_V5_MC_L2Relative_AK4PFchs"
+      },
+      "JerNominal": {
+        "tagNamePtResolution": "Summer19UL17_JRV4_MC_PtResolution_AK4PFchs",
+        "tagNameJerScaleFactor": "Summer19UL17_JRV4_MC_ScaleFactor_AK4PFchs",
+        "tagNameJerScaleFactorUncertainty": "Summer19UL17_JRV4_MC_SFUncertainty_AK4PFchs"
+      },
+      "JesUncertaintySet": {
+        "JesUncertaintySetTotal": {
+          "CMS_scale_j_Total": "Summer19UL17_V5_MC_Total_AK4PFchs"
+        }
+      }
+    }
+  }
+}

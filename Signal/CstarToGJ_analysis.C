@@ -199,7 +199,13 @@ void CstarToGJAnalysis::Loop(const char *outputFile, double crossSectionPb)
 
     JecConfigReader::ConfigPaths paths;
 
-    paths.ak4 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK4.json";
+    const char *signalSourceDirectory = gSystem->Getenv("CSTARTOGJ_SIGNAL_DIR");
+    if (!signalSourceDirectory || !signalSourceDirectory[0]) {
+        throw std::runtime_error(
+            "CSTARTOGJ_SIGNAL_DIR is not set; run the analysis through Signal/runAna.sh");
+    }
+    paths.ak4 = TString::Format(
+        "%s/JecConfigAK4_CHS.json", signalSourceDirectory).Data();
     paths.ak8 ="/eos/user/h/hsiaoche/Signal/uncertainty_sources/jerc-application-tutorial/JecConfigAK8.json";
 
     JecConfigReader::JecConfig cfg(paths);

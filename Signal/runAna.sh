@@ -163,6 +163,7 @@ eval "$(scram runtime -sh)"
 cd "$output_dir"
 
 export LD_LIBRARY_PATH=/afs/cern.ch/user/h/hsiaoche/.local/lib/python3.9/site-packages/correctionlib/lib:${LD_LIBRARY_PATH:-}
+export CSTARTOGJ_SIGNAL_DIR="$script_dir"
 
 root -l -b -q \
     "$script_dir/loadAna.C(\"$input_file\",\"$output_file\",\"$script_dir\",$cross_section)"
