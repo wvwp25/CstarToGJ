@@ -8,13 +8,14 @@ usage() {
     echo "Run the common C-star event analysis."
     echo
     echo "Usage:"
-    echo "  $0 -f COUPLING -m MASS"
-    echo "  $0 -f COUPLING"
+    echo "  $0                         Run every discovered mass and coupling."
+    echo "  $0 -f COUPLING... -m MASS"
+    echo "  $0 -f COUPLING..."
     echo "  $0 -all"
     echo "  $0 INPUT_ROOT_FILE [OUTPUT_ROOT_FILE]"
     echo
     echo "Options:"
-    echo "  -f COUPLING  Coupling label, for example f0p1, f0p5, or f1p0."
+    echo "  -f COUPLING...  One or more coupling labels: f0p1, f0p5, or f1p0."
     echo "  -m MASS      Mass label, accepted as M1200 or 1200."
     echo "  -all         Run every discovered mass and coupling sequentially."
     echo "  --all, -a    Aliases for -all."
@@ -36,6 +37,24 @@ if [[ ${1:-} == "-help" || ${1:-} == "--help" || ${1:-} == "-h" ]]; then
     (( $# == 1 )) || { usage >&2; exit 2; }
     usage
     exit 0
+fi
+
+# Allow selections such as: -f f1p0 f0p5 -m 2600.
+if [[ ${1:-} == "-f" ]]; then
+    shift
+    selected_couplings=()
+    while (( $# > 0 )) && [[ "$1" != -* ]]; do
+        selected_couplings+=("$1")
+        shift
+    done
+    (( ${#selected_couplings[@]} > 0 )) || { usage >&2; exit 2; }
+    if (( ${#selected_couplings[@]} > 1 )); then
+        for selected_coupling in "${selected_couplings[@]}"; do
+            "$script_dir/runAna.sh" -f "$selected_coupling" "$@"
+        done
+        exit 0
+    fi
+    set -- -f "${selected_couplings[0]}" "$@"
 fi
 
 run_discovered_inputs() {
@@ -71,6 +90,11 @@ run_discovered_inputs() {
         "$script_dir/runAna.sh" -f "$found_coupling" -m "M$mass"
     done
 }
+
+if (( $# == 0 )); then
+    run_discovered_inputs
+    exit 0
+fi
 
 if [[ ${1:-} == "-all" || ${1:-} == "--all" || ${1:-} == "-a" ]]; then
     (( $# == 1 )) || { usage >&2; exit 2; }

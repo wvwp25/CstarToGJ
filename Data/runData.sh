@@ -13,6 +13,7 @@ usage() {
     echo "Run the 2017 data background workflow."
     echo
     echo "Usage:"
+    echo "  $0                  Run the complete workflow for every mass."
     echo "  $0 -make"
     echo "  $0 -m MASS"
     echo "  $0 -m all"
@@ -109,10 +110,8 @@ for required_file in make_Run2017BCDEF_BG.C Run2017BCDEF.h Bkg_model.C \
 done
 
 if (( $# == 0 )); then
-    usage >&2
-    exit 2
-fi
-
+    mode="all"
+else
 case "$1" in
     -help|--help|-h)
         (( $# == 1 )) || { usage >&2; exit 2; }
@@ -150,6 +149,7 @@ case "$1" in
         exit 2
         ;;
 esac
+fi
 
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 cd "$cmssw_dir"
