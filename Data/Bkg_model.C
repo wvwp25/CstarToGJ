@@ -62,17 +62,17 @@ bool inSidebands(double mass, double fitMin, double fitMax) {
          !(mass > excludedLow && mass < excludedHigh);
 }
 
-void drawPrivateLabel(double luminosityFb, bool poster) {
+void drawPrivateLabel(double luminosityFb) {
   TLatex label;
   label.SetNDC();
   label.SetTextFont(52);
   // The label is drawn in the 70%-height top pad.  A size of 0.050 there
-  // matches 0.045 on the 900x700 poster Brazil canvas.
-  label.SetTextSize(poster ? 0.050 : 0.035);
+  // matches 0.045 on the 900x700 Brazil canvas.
+  label.SetTextSize(0.050);
   label.DrawLatex(0.12, 0.90, "Private work (CMS data)");
   label.SetTextFont(42);
   label.SetTextAlign(31);
-  label.SetTextSize(poster ? 0.050 : 0.035);
+  label.SetTextSize(0.050);
   label.DrawLatex(0.95, 0.90,
                   Form("%.1f fb^{-1} (13TeV)", luminosityFb));
 }
@@ -82,8 +82,7 @@ void drawPrivateLabel(double luminosityFb, bool poster) {
 void Bkg_model(int signalMass = 1000,
                double fitMin = 700.0,
                double fitMax = 3500.0,
-               const char *plotFormat = "png",
-               bool poster = false) {
+               const char *plotFormat = "png") {
   // A zero mass is the all-mass mode.  Reuse the common data histogram and
   // run the same independent sideband fit for every tested hypothesis.
   if (signalMass == 0) {
@@ -91,7 +90,7 @@ void Bkg_model(int signalMass = 1000,
                                 2200, 2400, 2600, 2800, 3000};
     for (const int mass : testedMasses) {
       std::cout << "\n===== Background fit for M" << mass << " =====\n";
-      Bkg_model(mass, fitMin, fitMax, plotFormat, poster);
+      Bkg_model(mass, fitMin, fitMax, plotFormat);
     }
     return;
   }
@@ -260,9 +259,8 @@ void Bkg_model(int signalMass = 1000,
   // source histogram has 4 GeV bins, so combine 20 bins (80 GeV) for display
   // only.  Keep the rebinned sums so the vertical scale is events per actual
   // displayed bin; a separate plotting function is scaled consistently below.
-  // Use twice as many visible bins in the poster version (40 GeV rather than
-  // 80 GeV) so the data markers form a denser distribution.
-  const int displayRebin = poster ? 10 : 20;
+  // Use 40 GeV display bins so the data markers form a dense distribution.
+  const int displayRebin = 10;
   const double sourceBinWidth = data->GetXaxis()->GetBinWidth(1);
   TH1 *displayData = dynamic_cast<TH1 *>(data->Clone("hM_display"));
   displayData->SetDirectory(nullptr);
@@ -319,18 +317,18 @@ void Bkg_model(int signalMass = 1000,
   }
 
   gStyle->SetOptStat(0);
-  gStyle->SetLineWidth(poster ? 2 : 1);
+  gStyle->SetLineWidth(2);
   gROOT->SetBatch(kTRUE);
   TCanvas canvas("cSimultaneousSidebands", "Simultaneous sideband fit",
-                 poster ? 900 : 700, poster ? 900 : 700);
-  canvas.SetFrameLineWidth(poster ? 3 : 1);
-  canvas.SetLineWidth(poster ? 2 : 1);
+                 900, 900);
+  canvas.SetFrameLineWidth(3);
+  canvas.SetLineWidth(2);
   TPad topPad("topPad", "data and fit", 0.0, 0.30, 1.0, 1.0);
   TPad residualPad("residualPad", "fractional residual", 0.0, 0.0, 1.0, 0.30);
-  // Match the poster Brazil plots.  Text sizes are pad-relative, so compensate
+  // Match the Brazil plots.  Text sizes are pad-relative, so compensate
   // for the 70/30 split to retain the same apparent size as on a 900x700 canvas.
-  constexpr double posterTopTextSize = 0.048 * 700.0 / (0.70 * 900.0);
-  constexpr double posterResidualTextSize = 0.048 * 700.0 / (0.30 * 900.0);
+  constexpr double topTextSize = 0.048 * 700.0 / (0.70 * 900.0);
+  constexpr double residualTextSize = 0.048 * 700.0 / (0.30 * 900.0);
   topPad.SetLeftMargin(0.12);
   topPad.SetRightMargin(0.05);
   topPad.SetTopMargin(0.11);
@@ -340,10 +338,10 @@ void Bkg_model(int signalMass = 1000,
   residualPad.SetRightMargin(0.05);
   residualPad.SetTopMargin(0.03);
   residualPad.SetBottomMargin(0.32);
-  topPad.SetFrameLineWidth(poster ? 3 : 1);
-  residualPad.SetFrameLineWidth(poster ? 3 : 1);
-  topPad.SetLineWidth(poster ? 2 : 1);
-  residualPad.SetLineWidth(poster ? 2 : 1);
+  topPad.SetFrameLineWidth(3);
+  residualPad.SetFrameLineWidth(3);
+  topPad.SetLineWidth(2);
+  residualPad.SetLineWidth(2);
   topPad.SetTicks(1, 1);
   residualPad.SetTicks(1, 1);
   topPad.Draw();
@@ -359,11 +357,9 @@ void Bkg_model(int signalMass = 1000,
   frame->SetTitle("");
   frame->GetYaxis()->SetTitle(Form("Events / %.0f GeV", displayBinWidth));
   frame->GetXaxis()->SetLabelSize(0.0);
-  if (poster) {
-    frame->GetYaxis()->SetTitleSize(posterTopTextSize);
-    frame->GetYaxis()->SetLabelSize(posterTopTextSize);
-    frame->GetYaxis()->SetTitleOffset(0.95);
-  }
+  frame->GetYaxis()->SetTitleSize(topTextSize);
+  frame->GetYaxis()->SetLabelSize(topTextSize);
+  frame->GetYaxis()->SetTitleOffset(0.95);
   displayData->SetMarkerStyle(20);
   displayData->SetMarkerSize(0.85);
   displayData->SetMarkerColor(kBlack);
@@ -384,12 +380,12 @@ void Bkg_model(int signalMass = 1000,
   highLine.SetLineStyle(2);
   lowLine.Draw();
   highLine.Draw();
-  drawPrivateLabel(luminosityFb, poster);
+  drawPrivateLabel(luminosityFb);
 
   TLegend legend(0.57, 0.68, 0.89, 0.84);
   legend.SetBorderSize(0);
   legend.SetFillStyle(0);
-  legend.SetTextSize(poster ? 0.040 : 0.035);
+  legend.SetTextSize(0.040);
   legend.AddEntry(displayData, "Data (sidebands)", "lep");
   legend.AddEntry(&displayBackground, "4-parameter fit", "l");
   legend.AddEntry(&lowLine, "Excluded signal window", "l");
@@ -407,20 +403,13 @@ void Bkg_model(int signalMass = 1000,
   residualFrame->SetTitle("");
   residualFrame->GetXaxis()->SetTitle("m_{#gamma+jet} [GeV]");
   residualFrame->GetYaxis()->SetTitle("(Data-Fit)/Fit");
-  residualFrame->GetXaxis()->SetTitleSize(0.12);
-  residualFrame->GetXaxis()->SetLabelSize(0.10);
   residualFrame->GetXaxis()->SetTitleOffset(1.05);
-  residualFrame->GetYaxis()->SetTitleSize(0.10);
-  residualFrame->GetYaxis()->SetLabelSize(0.08);
-  residualFrame->GetYaxis()->SetTitleOffset(0.48);
   residualFrame->GetYaxis()->SetNdivisions(505);
-  if (poster) {
-    residualFrame->GetXaxis()->SetTitleSize(posterResidualTextSize);
-    residualFrame->GetXaxis()->SetLabelSize(posterResidualTextSize);
-    residualFrame->GetYaxis()->SetTitleSize(posterResidualTextSize);
-    residualFrame->GetYaxis()->SetLabelSize(posterResidualTextSize);
-    residualFrame->GetYaxis()->SetTitleOffset(0.38);
-  }
+  residualFrame->GetXaxis()->SetTitleSize(residualTextSize);
+  residualFrame->GetXaxis()->SetLabelSize(residualTextSize);
+  residualFrame->GetYaxis()->SetTitleSize(residualTextSize);
+  residualFrame->GetYaxis()->SetLabelSize(residualTextSize);
+  residualFrame->GetYaxis()->SetTitleOffset(0.38);
 
   residual.SetMarkerStyle(20);
   residual.SetMarkerSize(0.85);
@@ -443,8 +432,8 @@ void Bkg_model(int signalMass = 1000,
   canvas.Modified();
   canvas.Update();
 
-  const TString plotName = Form("Invariant_Mass_gJet_M%d%s.%s", signalMass,
-                                poster ? "_poster" : "", plotFormat);
+  const TString plotName =
+      Form("Invariant_Mass_gJet_M%d.%s", signalMass, plotFormat);
   canvas.SaveAs(plotName);
 
   const TString outputName =

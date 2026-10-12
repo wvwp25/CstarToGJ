@@ -75,12 +75,9 @@ fit_mass() {
         die "Missing $data_dir/Run2017BCDEF_BG.root; run $0 -make first"
     [[ -f "/eos/user/h/hsiaoche/Signal/CstarToGJ_M${mass}_f1p0_13TeV_NANOAOD/signal_DSCB_workspace_paramSyst.root" ]] || \
         die "Missing f1p0 signal workspace for M$mass"
-    echo "===== Fitting the M$mass background (thesis plot) ====="
+    echo "===== Fitting the M$mass background ====="
     root_macro \
-        "$script_dir/Bkg_model.C+($mass,700.0,3500.0,\"$plot_format\",false)"
-    echo "===== Fitting the M$mass background (poster plot) ====="
-    root_macro \
-        "$script_dir/Bkg_model.C+($mass,700.0,3500.0,\"$plot_format\",true)"
+        "$script_dir/Bkg_model.C+($mass,700.0,3500.0,\"$plot_format\")"
     [[ -f "$data_dir/Run2017BCDEF_BG_M${mass}.root" ]] || \
         die "The fit macro did not create Run2017BCDEF_BG_M${mass}.root"
 }
