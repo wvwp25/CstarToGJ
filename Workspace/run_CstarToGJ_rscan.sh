@@ -7,7 +7,7 @@ Usage:
   ./run_CstarToGJ_rscan.sh [options]
 
 Options:
-  -f, --coupling VALUE   Coupling to process: f1p0, f0p5, f0p1. Default: f1p0
+  -f, --coupling VALUE... Coupling(s) to process. Default: all
   -w, --work-dir PATH    Directory with generated workspace ROOT files.
                          Default: /eos/user/h/hsiaoche/workspace
   -c, --cmssw-dir PATH   CMSSW directory used for cmsenv. Default: /eos/user/h/hsiaoche/CMSSW_13_3_0
@@ -40,6 +40,13 @@ Manual command for one mass point / coupling, e.g. M1000 f1p0:
     -o scan_M1000_f1p0
 USAGE
 }
+
+if [ "${CSTAR_SINGLE_COUPLING_RUN:-0}" -ne 1 ]; then
+  dispatch_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  source "$dispatch_dir/workspace_coupling_dispatch.sh"
+  dispatch_workspace_couplings "$0" "$@"
+  exit $?
+fi
 
 coupling="f1p0"
 work_dir="/eos/user/h/hsiaoche/workspace"

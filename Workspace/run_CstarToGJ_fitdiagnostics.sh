@@ -7,7 +7,7 @@ Usage:
   ./run_CstarToGJ_fitdiagnostics.sh [options]
 
 Options:
-  -f, --coupling VALUE   Coupling to process: f1p0, f0p5, f0p1. Default: f1p0
+  -f, --coupling VALUE... Coupling(s) to process. Default: all
   -w, --work-dir PATH    Directory with generated workspace ROOT files.
                          Default: /eos/user/h/hsiaoche/workspace
   -c, --cmssw-dir PATH   CMSSW directory used for cmsenv. Default: /eos/user/h/hsiaoche/CMSSW_13_3_0
@@ -49,6 +49,13 @@ Manual command for one mass point / coupling, e.g. M1000 f1p0:
     -g pulls_M1000_f1p0.root
 USAGE
 }
+
+if [ "${CSTAR_SINGLE_COUPLING_RUN:-0}" -ne 1 ]; then
+  dispatch_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  source "$dispatch_dir/workspace_coupling_dispatch.sh"
+  dispatch_workspace_couplings "$0" "$@"
+  exit $?
+fi
 
 coupling="f1p0"
 work_dir="/eos/user/h/hsiaoche/workspace"
@@ -138,6 +145,7 @@ fi
 
 cd "$work_dir" || exit 1
 work_dir="$(pwd -P)"
+combined_limit_dir="${CMSSW_BASE:-$cmssw_dir}/src/HiggsAnalysis/CombinedLimit"
 
 workspaces=()
 if [ -n "$mass_list" ]; then
@@ -250,7 +258,7 @@ for ws in "${workspaces[@]}"; do
   rename_plot_if_present covariance_fit_s.png "covariance_fit_s_${label}.png"
 
   run_step_to_file "$diff_file" \
-    python3 "$CMSSW_BASE/src/HiggsAnalysis/CombinedLimit/test/diffNuisances.py" \
+    python3 "$combined_limit_dir/test/diffNuisances.py" \
     "$fit_file" \
     --all --abs
   rc=$?
@@ -264,7 +272,7 @@ for ws in "${workspaces[@]}"; do
     continue
   fi
 
-  run_step python3 "$CMSSW_BASE/src/HiggsAnalysis/CombinedLimit/test/diffNuisances.py" \
+  run_step python3 "$combined_limit_dir/test/diffNuisances.py" \
     "$fit_file" \
     --all \
     --pullDef relDiffAsymErrs \

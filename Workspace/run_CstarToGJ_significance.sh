@@ -8,7 +8,7 @@ Usage:
 
 Options:
   --card PATH            Single datacard/workspace to process. If omitted, use datacard_M*_${coupling}.txt
-  -f, --coupling VALUE   Coupling to process: f1p0, f0p5, f0p1. Default: f1p0
+  -f, --coupling VALUE... Coupling(s) to process. Default: all
   -w, --work-dir PATH    Directory for generated workspaces/results.
                          Default: /eos/user/h/hsiaoche/workspace
   -c, --cmssw-dir PATH   CMSSW directory used for cmsenv. Default: /eos/user/h/hsiaoche/CMSSW_13_3_0
@@ -32,6 +32,13 @@ Manual command:
   combine -M Significance datacard.txt -m MASS -n _significance_LABEL
 USAGE
 }
+
+if [ "${CSTAR_SINGLE_COUPLING_RUN:-0}" -ne 1 ]; then
+  dispatch_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  source "$dispatch_dir/workspace_coupling_dispatch.sh"
+  dispatch_workspace_couplings "$0" "$@"
+  exit $?
+fi
 
 card=""
 coupling="f1p0"
