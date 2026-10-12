@@ -283,6 +283,39 @@ RooFormulaVar makeSystParam(const char *name,
                          RooArgList(thetaJES, thetaJER, thetaPES));
 }
 
+RooFormulaVar makePositiveSystParam(
+    const char *name,
+    const char *title,
+    const std::map<std::string, FitParams> &params,
+    double FitParams::*member,
+    RooRealVar &thetaJES,
+    RooRealVar &thetaJER,
+    RooRealVar &thetaPES)
+{
+    const double nominal = params.at("sig").*member;
+    const double jesUp = params.at("sig_JESUp").*member;
+    const double jesDown = params.at("sig_JESDown").*member;
+    const double jerUp = params.at("sig_JERUp").*member;
+    const double jerDown = params.at("sig_JERDown").*member;
+    const double pesUp = params.at("sig_PESUp").*member;
+    const double pesDown = params.at("sig_PESDown").*member;
+
+    // Interpolate each nuisance exponentially and use its fitted Up/Down
+    // value on the corresponding side of zero.  This reproduces every
+    // template at theta=+/-1 while keeping the parameter strictly positive
+    // for all nuisance values seen by the likelihood minimizer.
+    const std::string formula = Form(
+        "%.17g*exp((@0>=0 ? %.17g*@0 : %.17g*@0)"
+        "+(@1>=0 ? %.17g*@1 : %.17g*@1)"
+        "+(@2>=0 ? %.17g*@2 : %.17g*@2))",
+        nominal,
+        std::log(jesUp / nominal), -std::log(jesDown / nominal),
+        std::log(jerUp / nominal), -std::log(jerDown / nominal),
+        std::log(pesUp / nominal), -std::log(pesDown / nominal));
+    return RooFormulaVar(name, title, formula.c_str(),
+                         RooArgList(thetaJES, thetaJER, thetaPES));
+}
+
 } // namespace
 
 void produce_signal_DSCB_workspace_paramSyst(
@@ -382,24 +415,24 @@ void produce_signal_DSCB_workspace_paramSyst(
     RooFormulaVar x0Syst = makeSystParam("x0_syst", "x0_syst",
                                          nom.x0, dx0JES, dx0JER, dx0PES,
                                          thetaJES, thetaJER, thetaPES);
-    RooFormulaVar sigmaLSyst = makeSystParam("sigmaL_syst", "sigmaL_syst",
-                                             nom.sigmaL, dsigmaLJES, dsigmaLJER, dsigmaLPES,
-                                             thetaJES, thetaJER, thetaPES);
-    RooFormulaVar sigmaRSyst = makeSystParam("sigmaR_syst", "sigmaR_syst",
-                                             nom.sigmaR, dsigmaRJES, dsigmaRJER, dsigmaRPES,
-                                             thetaJES, thetaJER, thetaPES);
-    RooFormulaVar alphaLSyst = makeSystParam("alphaL_syst", "alphaL_syst",
-                                             nom.alphaL, dalphaLJES, dalphaLJER, dalphaLPES,
-                                             thetaJES, thetaJER, thetaPES);
-    RooFormulaVar nLSyst = makeSystParam("nL_syst", "nL_syst",
-                                         nom.nL, dnLJES, dnLJER, dnLPES,
-                                         thetaJES, thetaJER, thetaPES);
-    RooFormulaVar alphaRSyst = makeSystParam("alphaR_syst", "alphaR_syst",
-                                             nom.alphaR, dalphaRJES, dalphaRJER, dalphaRPES,
-                                             thetaJES, thetaJER, thetaPES);
-    RooFormulaVar nRSyst = makeSystParam("nR_syst", "nR_syst",
-                                         nom.nR, dnRJES, dnRJER, dnRPES,
-                                         thetaJES, thetaJER, thetaPES);
+    RooFormulaVar sigmaLSyst = makePositiveSystParam(
+        "sigmaL_syst", "sigmaL_syst", params, &FitParams::sigmaL,
+        thetaJES, thetaJER, thetaPES);
+    RooFormulaVar sigmaRSyst = makePositiveSystParam(
+        "sigmaR_syst", "sigmaR_syst", params, &FitParams::sigmaR,
+        thetaJES, thetaJER, thetaPES);
+    RooFormulaVar alphaLSyst = makePositiveSystParam(
+        "alphaL_syst", "alphaL_syst", params, &FitParams::alphaL,
+        thetaJES, thetaJER, thetaPES);
+    RooFormulaVar nLSyst = makePositiveSystParam(
+        "nL_syst", "nL_syst", params, &FitParams::nL,
+        thetaJES, thetaJER, thetaPES);
+    RooFormulaVar alphaRSyst = makePositiveSystParam(
+        "alphaR_syst", "alphaR_syst", params, &FitParams::alphaR,
+        thetaJES, thetaJER, thetaPES);
+    RooFormulaVar nRSyst = makePositiveSystParam(
+        "nR_syst", "nR_syst", params, &FitParams::nR,
+        thetaJES, thetaJER, thetaPES);
 
     RooCrystalBall dscb("dscb", "DSCB with shape systematics",
                         x, x0Syst, sigmaLSyst, sigmaRSyst,
@@ -412,7 +445,8 @@ void produce_signal_DSCB_workspace_paramSyst(
     ws.import(nsig);
     ws.writeToFile(outputName);
 
-    std::cout << "\nNominal parameters and symmetric deltas:\n";
+    std::cout << "\nNominal parameters and symmetric diagnostic deltas:\n";
+    std::cout << "Positive parameters use piecewise exponential Up/Down interpolation.\n";
     std::cout << "parameter nominal delta_JES delta_JER delta_PES\n";
     std::cout << "x0 " << nom.x0 << " " << dx0JES << " " << dx0JER << " " << dx0PES << "\n";
     std::cout << "sigmaL " << nom.sigmaL << " " << dsigmaLJES << " " << dsigmaLJER << " " << dsigmaLPES << "\n";

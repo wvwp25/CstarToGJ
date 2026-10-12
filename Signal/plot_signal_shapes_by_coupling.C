@@ -80,7 +80,7 @@ int curveColor(unsigned int index, unsigned int count)
 
 void plotOneCoupling(const TString &baseDir, const TString &outputDir,
                      const TString &outputSuffix, const TString &coupling,
-                     double xMin, double xMax, int nSamples, bool poster)
+                     double xMin, double xMax, int nSamples)
 {
     const std::vector<SignalPoint> points = findSignalPoints(baseDir, coupling);
     if (points.empty()) {
@@ -88,13 +88,13 @@ void plotOneCoupling(const TString &baseDir, const TString &outputDir,
         return;
     }
 
-    gStyle->SetLineWidth(poster ? 2 : 1);
+    gStyle->SetLineWidth(2);
     TCanvas canvas("canvas_" + coupling,
                    "Charge-inclusive c* and anti-c* signal shapes",
-                   poster ? 1100 : 1000, poster ? 825 : 750);
-    canvas.SetFrameLineWidth(poster ? 3 : 1);
-    canvas.SetLineWidth(poster ? 2 : 1);
-    canvas.SetLeftMargin(poster ? 0.16 : 0.13);
+                   1100, 825);
+    canvas.SetFrameLineWidth(3);
+    canvas.SetLineWidth(2);
+    canvas.SetLeftMargin(0.16);
     canvas.SetRightMargin(0.04);
     canvas.SetBottomMargin(0.12);
     canvas.SetTopMargin(0.08);
@@ -105,20 +105,12 @@ void plotOneCoupling(const TString &baseDir, const TString &outputDir,
     frame.SetStats(false);
     frame.GetXaxis()->SetTitle("m_{#gamma+j} [GeV]");
     frame.GetYaxis()->SetTitle("Probability density [GeV^{-1}]");
-    frame.GetXaxis()->SetTitleSize(0.035);
-    frame.GetYaxis()->SetTitleSize(0.035);
-    frame.GetXaxis()->SetLabelSize(0.040);
-    frame.GetYaxis()->SetLabelSize(0.040);
-    frame.GetXaxis()->SetTitleOffset(1.35);
-    frame.GetYaxis()->SetTitleOffset(1.75);
-    if (poster) {
-        frame.GetXaxis()->SetTitleSize(0.048);
-        frame.GetYaxis()->SetTitleSize(0.048);
-        frame.GetXaxis()->SetLabelSize(0.048);
-        frame.GetYaxis()->SetLabelSize(0.048);
-        frame.GetXaxis()->SetTitleOffset(1.05);
-        frame.GetYaxis()->SetTitleOffset(1.45);
-    }
+    frame.GetXaxis()->SetTitleSize(0.048);
+    frame.GetYaxis()->SetTitleSize(0.048);
+    frame.GetXaxis()->SetLabelSize(0.048);
+    frame.GetYaxis()->SetLabelSize(0.048);
+    frame.GetXaxis()->SetTitleOffset(1.05);
+    frame.GetYaxis()->SetTitleOffset(1.45);
     frame.SetMinimum(0.0);
 
     std::vector<std::unique_ptr<TGraph>> graphs;
@@ -166,7 +158,7 @@ void plotOneCoupling(const TString &baseDir, const TString &outputDir,
     for (const auto &graph : graphs)
         graph->Draw("L SAME");
 
-    TLegend legend(0.54, 0.59, poster ? 0.90 : 0.87, 0.89);
+    TLegend legend(0.54, 0.59, 0.90, 0.89);
     legend.SetNColumns(2);
     legend.SetBorderSize(0);
     legend.SetFillStyle(0);
@@ -187,27 +179,25 @@ void plotOneCoupling(const TString &baseDir, const TString &outputDir,
     TLatex label;
     label.SetNDC();
     label.SetTextAlign(31);
-    label.SetTextSize(poster ? 0.045 : 0.035);
+    label.SetTextSize(0.045);
     label.SetTextFont(42);
-    label.DrawLatex(poster ? 0.96 : 0.94, 0.93,
-                    "41.8 fb^{-1} (13TeV)");
-    label.DrawLatex(poster ? 0.30 : 0.25, 0.84, "f = " + couplingLabel);
+    label.DrawLatex(0.96, 0.93, "41.8 fb^{-1} (13TeV)");
+    label.DrawLatex(0.30, 0.84, "f = " + couplingLabel);
     label.SetTextAlign(13);
 
     gSystem->mkdir(outputDir, true);
     const TString stem = outputDir + "/signal_shapes_f" + coupling
-                       + outputSuffix + (poster ? "_poster" : "");
+                       + outputSuffix;
     TLatex privateWorkLabel;
     privateWorkLabel.SetNDC();
     privateWorkLabel.SetTextAlign(13);
     privateWorkLabel.SetTextFont(52);
-    privateWorkLabel.SetTextSize(poster ? 0.045 : 0.035);
-    privateWorkLabel.DrawLatex(poster ? 0.16 : 0.14, 0.965,
+    privateWorkLabel.SetTextSize(0.045);
+    privateWorkLabel.DrawLatex(0.16, 0.965,
                                "Private work (CMS simulation)");
 
-    canvas.SaveAs(stem + ".png");
     canvas.SaveAs(stem + ".pdf");
-    std::cout << "Wrote " << stem << ".png/.pdf (" << graphs.size()
+    std::cout << "Wrote " << stem << ".pdf (" << graphs.size()
               << " signal models)" << std::endl;
 }
 
@@ -227,8 +217,6 @@ void plot_signal_shapes_by_coupling(
     const std::vector<TString> couplings = {"0p1", "0p5", "1p0"};
     for (const TString &coupling : couplings) {
         plotOneCoupling(baseDir, outputDir, outputSuffix, coupling,
-                        xMin, xMax, nSamples, false);
-        plotOneCoupling(baseDir, outputDir, outputSuffix, coupling,
-                        xMin, xMax, nSamples, true);
+                        xMin, xMax, nSamples);
     }
 }
