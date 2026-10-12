@@ -1,0 +1,86 @@
+\section{Background Modeling}
+\label{sec:background-modeling}
+
+The selected photon--jet invariant-mass spectrum is dominated by Standard
+Model prompt-photon production in association with jets.  Smaller
+contributions arise from multijet events in which a jet is misidentified as a
+photon, with a further subleading contribution from electroweak
+$W/Z+\mathrm{jets}$ production.  Since these processes produce a smoothly
+falling spectrum and their
+absolute rates are affected by sizeable theoretical and experimental
+uncertainties, the background is determined directly from data rather than
+from simulated samples.  This data-driven treatment also avoids relying on a
+simulation-based prediction of the jet-to-photon misidentification rate.
+
+Following previous searches for excited quarks in the photon+jet final state,
+the background distribution is described by the four-parameter empirical
+function
+\begin{equation}
+  \frac{\mathrm{d}N}{\mathrm{d}m_{\gamma j}}
+  = P_{0}\,
+    \frac{(1-x)^{P_{1}}}
+         {x^{P_{2}+P_{3}\ln x}},
+  \qquad
+  x \equiv \frac{m_{\gamma j}}{\sqrt{s}},
+  \qquad \sqrt{s}=13~\TeV ,
+  \label{eq:background-function}
+\end{equation}
+where $P_{0}$ controls the normalization and $P_{1}$, $P_{2}$, and $P_{3}$
+determine the shape.  This functional form is sufficiently flexible to model
+the steeply falling spectrum while remaining smooth over the full search
+region.
+
+An independent background fit is performed for each tested $c^{*}$ mass
+hypothesis.  The nominal peak position $x_{0}$ and the left and right widths,
+$\sigma_{\mathrm{L}}$ and $\sigma_{\mathrm{R}}$, are taken from the
+double-sided Crystal Ball signal model described in the preceding section,
+with the signal-shape nuisance parameters fixed to their nominal values.  To
+prevent a possible signal from biasing the
+background estimate, the asymmetric window
+\begin{equation}
+  x_{0}-3\sigma_{\mathrm{L}}
+  < m_{\gamma j} <
+  x_{0}+3\sigma_{\mathrm{R}}
+  \label{eq:background-excluded-window}
+\end{equation}
+is excluded.  A single fit to Eq.~\eqref{eq:background-function} is then made
+simultaneously to the data in the lower and upper sidebands over
+$700 < m_{\gamma j} < 3500~\GeV$.  Thus, the two sidebands constrain one common
+set of parameters and one common covariance matrix; the fitted function is
+used to interpolate smoothly across the excluded interval.  The window is
+derived from the $f=1.0$ signal model at each mass and the same background
+model is used for all three coupling hypotheses at that mass.
+
+Figure~\ref{fig:background-fit} shows a representative fit for
+$M_{c^{*}}=2.0~\TeV$.  The upper panel displays the data in the two sidebands
+and the fitted function, while the vertical dashed lines indicate the excluded
+signal window.  The lower panel shows the fractional residual,
+$(N_{\text{data}}-N_{\text{fit}})/N_{\text{fit}}$.  No resonant structure is
+introduced by the interpolation, and the residuals outside the masked region
+are compatible with the smooth background description within the statistical
+precision of the data.
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.82\textwidth]
+    {/eos/user/h/hsiaoche/Data/Invariant_Mass_gJet_M2000.png}
+  \caption{Fit of the four-parameter background function to the photon--jet
+    invariant-mass distribution for the $M_{c^{*}}=2.0~\TeV$ hypothesis.  The
+    data inside the interval bounded by the dashed lines are excluded from the
+    fit.  The curve across this interval is the interpolation determined by a
+    simultaneous fit to the lower and upper sidebands.  The lower panel shows
+    the fractional difference between the data and the fitted prediction.}
+  \label{fig:background-fit}
+\end{figure}
+
+For the statistical interpretation, a separate RooFit workspace is built for
+each mass hypothesis.  The fit intervals are chosen to contain the relevant
+signal line shape and sufficient sideband data: $500$--$1400~\GeV$ for the
+$1.0~\TeV$ hypothesis, increasing progressively to
+$2050$--$3500~\GeV$ for the $3.0~\TeV$ hypothesis.  Within each workspace,
+$P_{1}$, $P_{2}$, and $P_{3}$ are unconstrained nuisance parameters and are
+profiled in the likelihood fit.  The background normalization is also allowed
+to float independently through a rate parameter.  Consequently, both the
+normalization and the shape of the background are determined by the observed
+data in the final fit, and the statistical uncertainty of the fitted
+background is propagated to the confidence intervals.
