@@ -15,12 +15,12 @@ observation -1
 bin             bin1       bin1
 process         sig        bkg
 process         0          1
-rate            15521.7299  252784
+rate            15480.84978  252784
 
 lumi_13TeV      lnN       1.023              -
 CMS_highPtPhotonEff lnN       1.10               -
-CMS_ctag        lnN       0.8399775398/1.16002246   -
-CMS_pileup      lnN       0.9993818779/1.000618122   -
+CMS_ctag        lnN       0.839753891/1.160246109   -
+CMS_pileup      lnN       0.9994722458/1.000527754   -
 
 theta_JES       param     0  1
 theta_JER       param     0  1
